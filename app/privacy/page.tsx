@@ -101,8 +101,9 @@ export default function PrivacyPage() {
   return (
     <>
     <Navbar/>
-    <div className="min-h-screen bg-[#f5f3ef]">
-      <div className="max-w-2xl mx-auto px-6 py-20">
+    {/* bg-[#f5f3ef] */}
+    <div className="min-h-screen ">
+      <div className="max-w-2xl mx-auto px-6 py-32">
 
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background text-xs text-muted-foreground mb-8">

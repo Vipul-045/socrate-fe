@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#f5f3ef]">
       <Navbar />
       <div className="pt-16" />
       <Features />
