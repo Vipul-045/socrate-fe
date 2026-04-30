@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 const navLinks = [
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "FAQs", href: "#faqs" },
+  { label: "FAQs", href: "#faqs" }
 ];
 
 export function Navbar() {
@@ -58,9 +58,9 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
+          {/* <Button variant="ghost" size="sm" asChild>
             <Link href="/login">Log In</Link>
-          </Button>
+          </Button> */}
           <Button size="sm" asChild>
             <Link href="/login">Get Started Free</Link>
           </Button>

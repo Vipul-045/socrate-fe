@@ -1,4 +1,5 @@
 import { Flame } from "lucide-react";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -12,11 +13,11 @@ export function Footer() {
             </span>
           </div>
           <div className="flex flex-col items-center gap-3 text-md text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
             <a href="#" className="hover:text-foreground transition-colors">
-              Privacy
-            </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              Terms
+              Terms & Conditions
             </a>
             <a href="#" className="hover:text-foreground transition-colors">
               Contact
