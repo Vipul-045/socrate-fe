@@ -2,17 +2,16 @@ import { Flame } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border py-12">
+    <footer className=" border-t border-border py-12">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-primary" />
-            <span className="font-bold text-foreground">Socrate</span>
-            <span className="text-sm text-muted-foreground ml-2">
-              AI-powered study, simplified.
+        <div className="flex flex-col md:flex-row justify-between gap-6">
+          <div className="flex gap-2">
+            <span className="font-bold text-lg">Socrate</span>
+            <span className="text-md text-muted-foreground ml-2">
+              learning made easy
             </span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-3 text-md text-muted-foreground">
             <a href="#" className="hover:text-foreground transition-colors">
               Privacy
             </a>
