@@ -17,9 +17,12 @@ const crimsonText = Crimson_Text({
 });
 
 export const metadata: Metadata = {
-  title: "Socrate — AI-Powered Study Platform",
+  title: "Socrate Study Platform",
   description:
     "Upload any PDF and have an AI tutor explain, summarize, and quiz you instantly.",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({

@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="bg-background rounded-xl border border-border p-8 shadow-sm">
           <Button
             variant="outline"
-            className="w-full h-11 mb-6 text-sm font-medium"
+            className="w-full h-11 mb-3 text-sm font-medium"
             onClick={() => router.push("/dashboard")}
           >
             <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
@@ -66,7 +66,7 @@ export default function LoginPage() {
             Continue with Google
           </Button>
 
-          <div className="relative mb-6">
+          {/* <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-border" />
             </div>
@@ -120,9 +120,9 @@ export default function LoginPage() {
             <Button type="submit" className="w-full h-11">
               {isLogin ? "Sign In" : "Create Account"}
             </Button>
-          </form>
+          </form> */}
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          {/* <p className="text-center text-sm text-muted-foreground mt-6">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
               onClick={() => setIsLogin(!isLogin)}
@@ -130,7 +130,7 @@ export default function LoginPage() {
             >
               {isLogin ? "Sign up" : "Sign in"}
             </button>
-          </p>
+          </p> */}
         </div>
       </motion.div>
     </div>

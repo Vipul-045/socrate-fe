@@ -102,7 +102,7 @@ export default function PrivacyPage() {
     <>
     <Navbar/>
     {/* bg-[#f5f3ef] */}
-    <div className="min-h-screen ">
+    <div className="min-h-screen bg-[#f5f3ef]">
       <div className="max-w-2xl mx-auto px-6 py-32">
 
         {/* Badge */}
