@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Reveal, RevealGroup } from "@/hooks/use-reveal";
+import { CheckoutButton } from "../provider/chekout-button";
 
 const plans = [
   {
@@ -35,10 +36,10 @@ const plans = [
     badge: "Most Popular",
   },
   {
-    name: "Team",
+    name: "Max",
     price: "$29",
     period: "/month",
-    description: "For study groups & orgs",
+    description: "For practical studies",
     features: [
       "Everything in Pro",
       "Shared workspaces",
@@ -94,13 +95,20 @@ export function Pricing() {
                   {plan.period}
                 </span>
               </div>
-              <Button
-                className="w-full mb-6"
-                variant={plan.highlighted ? "default" : "outline"}
-                asChild
-              >
-                <Link href="/login">{plan.cta}</Link>
-              </Button>
+              {plan.name === "Pro" ? (
+                <CheckoutButton
+                  label={plan.cta}
+                  checkoutUrl="https://checkout.dodopayments.com/session/cks_123"
+                />
+              ) : (
+                <Button
+                  className="w-full mb-6"
+                  variant={plan.highlighted ? "default" : "outline"}
+                  asChild
+                >
+                  <Link href="/login">{plan.cta}</Link>
+                </Button>
+              )}
               <ul className="space-y-3">
                 {plan.features.map((feature) => (
                   <li

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Space_Grotesk, Crimson_Text } from "next/font/google";
+import DodoProvider from "../components/provider/dodo-provider";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -36,8 +38,17 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${crimsonText.variable}`}
     >
       <body>
+        <DodoProvider/>
         {children}
         <Toaster />
+
+        <Script
+          src="https://cdn.flowsery.com/main.js"
+          strategy="afterInteractive"
+          data-fl-website-id="flid_fMIM7nCNgJeJmBKsGt7_Ew"
+          data-cookieless="true"
+          data-local="true"
+        />
       </body>
     </html>
   );
