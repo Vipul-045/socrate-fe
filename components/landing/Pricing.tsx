@@ -96,8 +96,8 @@ export function Pricing() {
                 </span>
               </div>
               {plan.name === "Pro" ? (
-                <CheckoutButton
-                  label={plan.cta}
+                <CheckoutButton 
+                  label={plan.cta} 
                   checkoutUrl="https://checkout.dodopayments.com/session/cks_123"
                 />
               ) : (

@@ -5,16 +5,18 @@ import Link from "next/link";
 import { Flame, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
+import { authClient } from "@/lib/auth-client";
 
 const navLinks = [
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "FAQs", href: "#faqs" }
+  { label: "FAQs", href: "#faqs" },
 ];
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: session } = authClient.useSession();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -53,17 +55,35 @@ export function Navbar() {
               >
                 {link.label}
               </Link>
-            )
+            ),
           )}
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          {/* <Button variant="ghost" size="sm" asChild>
-            <Link href="/login">Log In</Link>
-          </Button> */}
-          <Button size="sm" asChild>
-            <Link href="/login">Get Started Free</Link>
-          </Button>
+          {session ? (
+            <>
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  await authClient.signOut();
+                }}
+              >
+                Log out
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link href="#">Hey {session.user.name?.split(" ")[0]}!</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/login">Log In</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/login">Get Started Free</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <button
@@ -107,15 +127,25 @@ export function Navbar() {
                   >
                     {link.label}
                   </Link>
-                )
+                ),
               )}
               <div className="flex gap-3 pt-2">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">Log In</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/login">Get Started Free</Link>
-                </Button>
+                {session ? (
+                  <Button size="sm" variant="outline" asChild>
+                    <Link href="/dashboard">
+                      Hey {session.user.name?.split(" ")[0]}
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/login">Log In</Link>
+                    </Button>
+                    <Button size="sm" asChild>
+                      <Link href="/login">Get Started Free</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

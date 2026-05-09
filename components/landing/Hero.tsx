@@ -25,7 +25,7 @@ export function Hero() {
           <Reveal delay={200}>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
               Upload any document and have an AI tutor explain, summarize, and
-              quiz you — instantly.
+              quiz you instantly.
             </p>
           </Reveal>
 
@@ -37,14 +37,14 @@ export function Hero() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button
+              {/* <Button
                 variant="outline"
                 size="lg"
                 className="h-12 px-8 text-base"
                 asChild
               >
-                <a href="#features">See Features</a>
-              </Button>
+                <a href="/features">See Features</a>
+              </Button> */}
             </div>
           </Reveal>
         </div>

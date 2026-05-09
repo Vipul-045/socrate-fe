@@ -43,6 +43,7 @@ export function CheckoutButton() {
     <Button 
       onClick={handleCheckout}
       disabled={isLoading}
+      className="mb-6"
     >
       {isLoading ? "Loading..." : "Checkout Now"}
     </Button>

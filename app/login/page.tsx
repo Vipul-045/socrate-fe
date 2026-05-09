@@ -7,6 +7,7 @@ import { Flame, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -43,7 +44,12 @@ export default function LoginPage() {
           <Button
             variant="outline"
             className="w-full h-11 mb-3 text-sm font-medium"
-            onClick={() => router.push("/dashboard")}
+            onClick={async () => {
+              await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "/pricing",
+              });
+            }}
           >
             <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
               <path
