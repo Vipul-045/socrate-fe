@@ -8,7 +8,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row justify-between gap-6">
           <div className="flex gap-2">
             <span className="font-bold text-lg">Socrate</span>
-            <span className="text-md text-muted-foreground ml-2">
+            <span className="text-md text-muted-foreground ml-2 mt-0.5">
               learning made easy
             </span>
           </div>
@@ -19,15 +19,6 @@ export function Footer() {
             <Link href="/terms" className="hover:text-foreground transition-colors">
               Terms & Conditions
             </Link>
-            <a href="#" className="hover:text-foreground transition-colors">
-              Contact
-            </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              Twitter/X
-            </a>
-            <a href="#" className="hover:text-foreground transition-colors">
-              GitHub
-            </a>
           </div>
         </div>
         <div className="text-center mt-8 text-xs text-muted-foreground">
