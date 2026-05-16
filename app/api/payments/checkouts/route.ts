@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       // ✅ Correct request body — product_cart array
       product_cart: [{ product_id: productId, quantity: 1 }],
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}`,
+      cancel_url: `${process.env.NEXT_APP_URL}/pricing`,
     }),
   });
 
