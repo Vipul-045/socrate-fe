@@ -1,4 +1,7 @@
+"use client"
+
 import { Check } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Reveal, RevealGroup } from "@/hooks/use-reveal";
@@ -6,6 +9,7 @@ import { CheckoutButton } from "../provider/chekout-button";
 
 const plans = [
   {
+    id: "starter",
     name: "Free",
     price: "$0",
     period: "forever",
@@ -20,6 +24,7 @@ const plans = [
     highlighted: false,
   },
   {
+    id: "pro",
     name: "Pro",
     price: "$12",
     period: "/month",
@@ -36,6 +41,7 @@ const plans = [
     badge: "Most Popular",
   },
   {
+    id:"business",
     name: "Max",
     price: "$29",
     period: "/month",
@@ -53,6 +59,7 @@ const plans = [
 ];
 
 export function Pricing() {
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   return (
     <section id="pricing" className="py-20 md:py-28 bg-muted/50 font-">
       <div className="max-w-6xl mx-auto px-6">
@@ -96,9 +103,10 @@ export function Pricing() {
                 </span>
               </div>
               {plan.name === "Pro" ? (
-                <CheckoutButton 
-                  label={plan.cta} 
-                  checkoutUrl="https://checkout.dodopayments.com/session/cks_123"
+                <CheckoutButton
+                  label={plan.cta}
+                  planId={plan.id}
+                  billingCycle={billingCycle}
                 />
               ) : (
                 <Button
