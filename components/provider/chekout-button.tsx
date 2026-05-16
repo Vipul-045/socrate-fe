@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 type CheckoutButtonProps = {
   label: string;
-  planId: string;          // e.g. "pro"
+  planId: string;       
   billingCycle: "monthly" | "yearly";
 };
 
@@ -53,9 +53,9 @@ export function CheckoutButton({ label, planId, billingCycle }: CheckoutButtonPr
       if (!res.ok) throw new Error("Failed to create checkout session");
 
       const data = await res.json();
-      const checkoutUrl: string = data.checkoutUrl; // your Express returns this
+      const checkoutUrl: string = data.checkoutUrl;
 
-      console.log("checkoutUrl:", checkoutUrl); // verify it's a full URL, not a session ID
+      console.log("checkoutUrl:", checkoutUrl);
 
       if (!checkoutUrl || !checkoutUrl.startsWith("http")) {
         throw new Error(`Invalid checkoutUrl received: ${checkoutUrl}`);
