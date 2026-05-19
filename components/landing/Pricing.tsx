@@ -17,8 +17,7 @@ const plans = [
     features: [
       "3 PDFs/month",
       "Basic chat",
-      "Watermarked notes",
-      "Community support",
+      "Watermarked notes"
     ],
     cta: "Get Started",
     highlighted: false,
@@ -41,19 +40,19 @@ const plans = [
     badge: "Most Popular",
   },
   {
-    id:"business",
+    id:"max",
     name: "Max",
-    price: "$29",
+    price: "$40",
     period: "/month",
     description: "For practical studies",
     features: [
       "Everything in Pro",
-      "Shared workspaces",
-      "Admin panel",
-      "Team analytics",
+      "Collaborate with friends",
+      "Extended Premium chats",
+      "Ai video generations",
       "Priority support",
     ],
-    cta: "Contact Sales",
+    cta: "Coming soon",
     highlighted: false,
   },
 ];
