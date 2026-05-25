@@ -11,8 +11,10 @@ const plans = [
   {
     id: "starter",
     name: "Free",
-    price: "$0",
+    price: "₹0",
+    originalPrice: null,
     period: "forever",
+    discountBadge: null,
     description: "Perfect for trying things out",
     features: [
       "3 PDFs/month",
@@ -25,8 +27,10 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
-    price: "$12",
+    price: "₹599",
+    originalPrice: "₹799",
     period: "/month",
+    discountBadge: "25% off for First 100 Students*",
     description: "For serious students",
     features: [
       "Unlimited PDFs",
@@ -35,15 +39,17 @@ const plans = [
       "No watermarks",
       "Chat history",
     ],
-    cta: "Start Pro Trial",
+    cta: "Upgrade to Pro",
     highlighted: true,
     badge: "Most Popular",
   },
   {
     id:"max",
     name: "Max",
-    price: "$40",
+    price: "*",
+    originalPrice: null,
     period: "/month",
+    discountBadge: null,
     description: "For practical studies",
     features: [
       "Everything in Pro",
@@ -91,16 +97,37 @@ export function Pricing() {
                   {plan.badge}
                 </div>
               )}
+
+              {/* Discount Badge */}
+              {plan.discountBadge && (
+                <div className="mb-4 inline-block px-3 py-1.5 rounded-full bg-yellow-400 text-black text-xs font-bold">
+                  {plan.discountBadge}
+                </div>
+              )}
+
               <h3 className="font-semibold text-lg mb-1">{plan.name}</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 {plan.description}
               </p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold">{plan.price}</span>
+
+              {/* Pricing Section with Discount */}
+              <div className="mb-4">
+                {plan.originalPrice && (
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <span className="text-lg text-muted-foreground line-through">
+                      {plan.originalPrice}
+                    </span>
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                  </div>
+                )}
+                {!plan.originalPrice && (
+                  <span className="text-4xl font-bold">{plan.price}</span>
+                )}
                 <span className="text-muted-foreground text-sm">
                   {plan.period}
                 </span>
               </div>
+
               {plan.name === "Pro" ? (
                 <CheckoutButton
                   label={plan.cta}
