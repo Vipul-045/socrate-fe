@@ -44,12 +44,18 @@ export default function LoginPage() {
           <Button
             variant="outline"
             className="w-full h-11 mb-3 text-sm font-medium"
-            onClick={async () => {
-              await authClient.signIn.social({
-                provider: "google",
-                callbackURL: "/pricing",
-              });
+            onClick={() => {
+              window.open(
+                "https://socrate-backend-9eza.onrender.com/auth/google",
+                "_self",
+              );
             }}
+            // onClick={async () => {
+            //   await authClient.signIn.social({
+            //     provider: "google",
+            //     callbackURL: "/pricing",
+            //   });
+            // }}
           >
             <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24">
               <path
