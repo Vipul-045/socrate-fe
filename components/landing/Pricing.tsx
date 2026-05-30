@@ -27,10 +27,10 @@ const plans = [
   {
     id: "pro",
     name: "Pro",
-    price: "₹599",
-    originalPrice: "₹799",
+    price: "₹399",
+    originalPrice: "₹499",
     period: "/month",
-    discountBadge: "25% off for First 100 Students*",
+    discountBadge: "20% off for First 100 Students*",
     description: "For serious students",
     features: [
       "Unlimited PDFs",
@@ -39,7 +39,7 @@ const plans = [
       "No watermarks",
       "Chat history",
     ],
-    cta: "Upgrade to Pro",
+    cta: "Start your 7 day free trial",
     highlighted: true,
     badge: "Most Popular",
   },
