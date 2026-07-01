@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     q: "How many PDFs can I upload?",
-    a: "Free users get 3 PDFs per month. Pro and Team plans include unlimited uploads.",
+    a: "Free users get 3 PDFs per month. Pro and Max plans include unlimited uploads.",
   },
   {
     q: "Do you offer student discounts?",
