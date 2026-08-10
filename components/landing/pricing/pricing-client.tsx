@@ -1,72 +1,32 @@
-"use client"
+// components/pricing/pricing-client.tsx
+"use client";
 
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Reveal, RevealGroup } from "@/hooks/use-reveal";
-import { CheckoutButton } from "../provider/chekout-button";
+import { CheckoutButton } from "../../provider/chekout-button";
 
-const plans = [
-  {
-    id: "starter",
-    name: "Free",
-    price: "₹0",
-    originalPrice: null,
-    period: "forever",
-    discountBadge: null,
-    description: "Perfect for trying things out",
-    features: [
-      "3 PDFs/month",
-      "Basic chat",
-      "Watermarked notes"
-    ],
-    cta: "Get Started",
-    highlighted: false,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: "₹399",
-    originalPrice: "₹499",
-    period: "/month",
-    discountBadge: "20% off for First 100 Students*",
-    description: "For serious students",
-    features: [
-      "Unlimited PDFs",
-      "Full notes download",
-      "Priority AI responses",
-      "No watermarks",
-      "Chat history",
-    ],
-    cta: "Start your 7 day free trial",
-    highlighted: true,
-    badge: "Most Popular",
-  },
-  {
-    id:"max",
-    name: "Max",
-    price: "*",
-    originalPrice: null,
-    period: "/month",
-    discountBadge: null,
-    description: "For practical studies",
-    features: [
-      "Everything in Pro",
-      "Collaborate with friends",
-      "Extended Premium chats",
-      "Ai video generations",
-      "Priority support",
-    ],
-    cta: "Coming soon",
-    highlighted: false,
-  },
-];
+export type Plan = {
+  id: string;
+  name: string;
+  price: string;
+  originalPrice: string | null;
+  period: string;
+  discountBadge: string | null;
+  description: string;
+  features: string[];
+  cta: string;
+  highlighted: boolean;
+  badge?: string;
+};
 
-export function Pricing() {
+export function PricingClient({ plans }: { plans: Plan[] }) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+
   return (
-    <section id="pricing" className="py-20 md:py-28 bg-muted/50 font-">
+    <section id="pricing" className="py-20 md:py-28 bg-muted/50">
       <div className="max-w-6xl mx-auto px-6">
         <Reveal>
           <div className="text-center mb-16">
@@ -79,13 +39,10 @@ export function Pricing() {
           </div>
         </Reveal>
 
-        <RevealGroup
-          className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"
-          staggerMs={100}
-        >
+        <RevealGroup className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto" staggerMs={100}>
           {plans.map((plan) => (
             <div
-              key={plan.name}
+              key={plan.id}
               className={`relative rounded-xl p-7 border transition-all ${
                 plan.highlighted
                   ? "border-foreground bg-background shadow-xl shadow-foreground/5 scale-[1.02]"
@@ -98,7 +55,6 @@ export function Pricing() {
                 </div>
               )}
 
-              {/* Discount Badge */}
               {plan.discountBadge && (
                 <div className="mb-4 inline-block px-3 py-1.5 rounded-full bg-yellow-400 text-black text-xs font-bold">
                   {plan.discountBadge}
@@ -106,49 +62,33 @@ export function Pricing() {
               )}
 
               <h3 className="font-semibold text-lg mb-1">{plan.name}</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {plan.description}
-              </p>
+              <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
 
-              {/* Pricing Section with Discount */}
               <div className="mb-4">
-                {plan.originalPrice && (
+                {plan.originalPrice ? (
                   <div className="flex items-baseline gap-3 mb-1">
                     <span className="text-lg text-muted-foreground line-through">
                       {plan.originalPrice}
                     </span>
                     <span className="text-4xl font-bold">{plan.price}</span>
                   </div>
-                )}
-                {!plan.originalPrice && (
+                ) : (
                   <span className="text-4xl font-bold">{plan.price}</span>
                 )}
-                <span className="text-muted-foreground text-sm">
-                  {plan.period}
-                </span>
+                <span className="text-muted-foreground text-sm">{plan.period}</span>
               </div>
 
               {plan.name === "Pro" ? (
-                <CheckoutButton
-                  label={plan.cta}
-                  planId={plan.id}
-                  billingCycle={billingCycle}
-                />
+                <CheckoutButton label={plan.cta} planId={plan.id} billingCycle={billingCycle} />
               ) : (
-                <Button
-                  className="w-full mb-6"
-                  variant={plan.highlighted ? "default" : "outline"}
-                  asChild
-                >
+                <Button className="w-full mb-6" variant={plan.highlighted ? "default" : "outline"} asChild>
                   <Link href="/login">{plan.cta}</Link>
                 </Button>
               )}
+
               <ul className="space-y-3">
                 {plan.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-2 text-sm text-muted-foreground"
-                  >
+                  <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Check className="h-4 w-4 text-foreground shrink-0" />
                     {feature}
                   </li>

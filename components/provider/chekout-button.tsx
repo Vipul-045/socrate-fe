@@ -6,11 +6,10 @@ import { useEffect, useState } from "react";
 
 type CheckoutButtonProps = {
   label: string;
-  planId: string;       
+  planId: string;
   billingCycle: "monthly" | "yearly";
 };
 
-// Initialize ONCE at module level, not inside the component
 let dodoInitialized = false;
 
 export function CheckoutButton({ label, planId, billingCycle }: CheckoutButtonProps) {
@@ -21,13 +20,11 @@ export function CheckoutButton({ label, planId, billingCycle }: CheckoutButtonPr
     dodoInitialized = true;
 
     DodoPayments.Initialize({
-      mode: process.env.NEXT_PUBLIC_DODO_MODE as "test" | "live" || "test",
+      mode: (process.env.NEXT_PUBLIC_DODO_PAYMENTS_ENVIRONMENT as "test" | "live") || "test",
       displayType: "overlay",
       onEvent: (event) => {
         switch (event.event_type) {
           case "checkout.opened":
-            setIsLoading(false);
-            break;
           case "checkout.closed":
             setIsLoading(false);
             break;
@@ -43,8 +40,8 @@ export function CheckoutButton({ label, planId, billingCycle }: CheckoutButtonPr
   const handleCheckout = async () => {
     setIsLoading(true);
     try {
-      // 1. Ask your backend to create the session and return the URL
-        const res = await fetch("/api/payments/checkouts", {
+      // Backend alone decides which Dodo product/price to use.
+      const res = await fetch("/api/payments/checkouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, billingCycle }),
@@ -55,15 +52,11 @@ export function CheckoutButton({ label, planId, billingCycle }: CheckoutButtonPr
       const data = await res.json();
       const checkoutUrl: string = data.checkoutUrl;
 
-      console.log("checkoutUrl:", checkoutUrl);
-
       if (!checkoutUrl || !checkoutUrl.startsWith("http")) {
-        throw new Error(`Invalid checkoutUrl received: ${checkoutUrl}`);
+        throw new Error("Invalid checkoutUrl received");
       }
 
-      // 2. Open the overlay with the real URL
       await DodoPayments.Checkout.open({ checkoutUrl });
-
     } catch (error) {
       console.error("Failed to open checkout:", error);
       setIsLoading(false);
