@@ -1,11 +1,10 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
+import { LegalPage, type LegalSection } from "@/components/site/legal-page";
 
-export const metadata = { title: "Terms & Conditions – Socrate" };
+export const metadata = { title: "Terms & Conditions" };
 
-const sections = [
+const sections: LegalSection[] = [
   {
-    title: "1. Acceptance of Terms",
+    title: "Acceptance of terms",
     items: [
       {
         label: "Agreement:",
@@ -18,7 +17,7 @@ const sections = [
     ],
   },
   {
-    title: "2. Use of the Service",
+    title: "Use of the service",
     items: [
       {
         label: "Eligibility:",
@@ -35,7 +34,7 @@ const sections = [
     ],
   },
   {
-    title: "3. Uploaded Content",
+    title: "Uploaded content",
     items: [
       {
         label: "Ownership:",
@@ -52,7 +51,7 @@ const sections = [
     ],
   },
   {
-    title: "4. Payments & Subscriptions",
+    title: "Payments & subscriptions",
     items: [
       {
         label: "Billing:",
@@ -69,7 +68,7 @@ const sections = [
     ],
   },
   {
-    title: "5. Intellectual Property",
+    title: "Intellectual property",
     items: [
       {
         label: "Our platform:",
@@ -82,7 +81,7 @@ const sections = [
     ],
   },
   {
-    title: "6. Disclaimers",
+    title: "Disclaimers",
     items: [
       {
         label: "No warranty:",
@@ -95,7 +94,7 @@ const sections = [
     ],
   },
   {
-    title: "7. Limitation of Liability",
+    title: "Limitation of liability",
     items: [
       {
         label: "Cap:",
@@ -108,7 +107,7 @@ const sections = [
     ],
   },
   {
-    title: "8. Contact",
+    title: "Contact",
     items: [
       {
         label: "Questions?",
@@ -118,52 +117,13 @@ const sections = [
   },
 ];
 
-export default function TermsPage() {
+export default function Page() {
   return (
-    <>
-    <Navbar/>
-    <div className="min-h-screen bg-[#f5f3ef]">
-      <div className="max-w-2xl mx-auto px-6 py-32">
-
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background text-xs text-muted-foreground mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          Last updated: March 28, 2026
-        </div>
-
-        {/* Title */}
-        <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4">
-          Terms & Conditions
-        </h1>
-
-        {/* Intro */}
-        <p className="text-muted-foreground text-base leading-relaxed mb-12 border-b border-dashed border-border pb-10">
-          Please read these terms carefully before using Socrate. By using the
-          platform, you agree to be bound by them. We've kept it plain and simple — no legal walls.
-        </p>
-
-        {/* Sections */}
-        <div className="space-y-12">
-          {sections.map((section) => (
-            <div key={section.title} className="border-b border-dashed border-border pb-10">
-              <h2 className="text-xl font-bold text-foreground mb-5">
-                {section.title}
-              </h2>
-              <div className="space-y-4">
-                {section.items.map((item) => (
-                  <p key={item.label} className="text-sm leading-relaxed text-muted-foreground">
-                    <span className="font-semibold text-foreground">{item.label}</span>{" "}
-                    {item.text}
-                  </p>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-      </div>
-    </div>
-    <Footer/>
-    </>
+    <LegalPage
+      title="Terms &amp; Conditions"
+      updated="March 28, 2026"
+      intro="Please read these terms carefully before using Socrate. By using the platform, you agree to be bound by them. We've kept it plain and simple — no legal walls."
+      sections={sections}
+    />
   );
 }

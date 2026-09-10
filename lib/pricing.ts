@@ -52,10 +52,53 @@ export function resolveProductId(
 
 // Display-only pricing, also resolved server-side, kept in lockstep with
 // the product IDs above so the UI never shows a price the backend won't honor.
+//
+// IMPORTANT: these strings are what the customer sees. They must match the
+// amounts configured on the corresponding Dodo products above — the backend
+// is what actually charges, this table only renders.
+export type DisplayPrice = {
+  price: string;
+  period: string;
+  originalPrice: string | null;
+  discountBadge: string | null;
+  /** Shown under the price on the yearly tab, e.g. "Billed ₹3,990 yearly". */
+  note: string | null;
+};
+
 export const PRO_DISPLAY_PRICING: Record<
   Region,
-  { price: string; originalPrice: string | null; discountBadge: string | null }
+  Record<BillingCycle, DisplayPrice>
 > = {
-  IN: { price: "₹399", originalPrice: "₹499", discountBadge: "20% off for First 100 Students*" },
-  GLOBAL: { price: "$9", originalPrice: null, discountBadge: null },
+  IN: {
+    monthly: {
+      price: "₹399",
+      period: "/month",
+      originalPrice: "₹499",
+      discountBadge: "20% off for first 100 students",
+      note: null,
+    },
+    yearly: {
+      price: "₹333",
+      period: "/month",
+      originalPrice: "₹399",
+      discountBadge: "2 months free",
+      note: "Billed ₹3,990 yearly",
+    },
+  },
+  GLOBAL: {
+    monthly: {
+      price: "$9",
+      period: "/month",
+      originalPrice: null,
+      discountBadge: null,
+      note: null,
+    },
+    yearly: {
+      price: "$7.50",
+      period: "/month",
+      originalPrice: "$9",
+      discountBadge: "2 months free",
+      note: "Billed $90 yearly",
+    },
+  },
 };
