@@ -1,21 +1,30 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Features } from "@/components/landing/Features";
-import { FAQ } from "@/components/landing/FAQ";
-import { Footer } from "@/components/landing/Footer";
+import { SiteShell } from "@/components/site/site-shell";
+import { FeatureGrid } from "@/components/site/feature-grid";
+import { Faq } from "@/components/site/faq";
+import { CtaBand } from "@/components/site/cta-band";
+import { Container, PageHeader, Section } from "@/components/site/primitives";
 
 export const metadata = {
-  title: "Features — Socrate",
+  title: "Features",
   description: "Everything you need to study smarter with AI.",
 };
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-[#f5f3ef]">
-      <Navbar />
-      <div className="pt-16" />
-      <Features />
-      <FAQ />
-      <Footer />
-    </div>
+    <SiteShell>
+      <Section>
+        <Container>
+          <PageHeader
+            eyebrow="Features"
+            title="Everything you need to study smarter"
+            lede="Powerful AI tools designed for students, researchers, and lifelong learners."
+          />
+          <FeatureGrid />
+        </Container>
+      </Section>
+
+      <Faq />
+      <CtaBand />
+    </SiteShell>
   );
 }

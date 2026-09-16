@@ -1,12 +1,10 @@
-import { Navbar } from "@/components/landing/Navbar";
-import { Footer } from "@/components/landing/Footer";
+import { LegalPage, type LegalSection } from "@/components/site/legal-page";
 
+export const metadata = { title: "Privacy Policy" };
 
-export const metadata = { title: "Privacy Policy – Socrate" };
-
-const sections = [
+const sections: LegalSection[] = [
   {
-    title: "1. Data We Collect",
+    title: "Data we collect",
     items: [
       {
         label: "Account information:",
@@ -27,7 +25,7 @@ const sections = [
     ],
   },
   {
-    title: "2. How We Use It",
+    title: "How we use it",
     items: [
       {
         label: "To provide the service:",
@@ -44,7 +42,7 @@ const sections = [
     ],
   },
   {
-    title: "3. Data Sharing",
+    title: "Data sharing",
     items: [
       {
         label: "We don't sell your data.",
@@ -57,7 +55,7 @@ const sections = [
     ],
   },
   {
-    title: "4. Data Retention",
+    title: "Data retention",
     items: [
       {
         label: "Your documents:",
@@ -70,7 +68,7 @@ const sections = [
     ],
   },
   {
-    title: "5. Your Rights",
+    title: "Your rights",
     items: [
       {
         label: "Access & export:",
@@ -87,7 +85,7 @@ const sections = [
     ],
   },
   {
-    title: "6. Contact",
+    title: "Contact",
     items: [
       {
         label: "Questions?",
@@ -97,53 +95,13 @@ const sections = [
   },
 ];
 
-export default function PrivacyPage() {
+export default function Page() {
   return (
-    <>
-    <Navbar/>
-    {/* bg-[#f5f3ef] */}
-    <div className="min-h-screen bg-[#f5f3ef]">
-      <div className="max-w-2xl mx-auto px-6 py-32">
-
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-background text-xs text-muted-foreground mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          Last updated: March 28, 2026
-        </div>
-
-        {/* Title */}
-        <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4">
-          Privacy Policy
-        </h1>
-
-        {/* Intro */}
-        <p className="text-muted-foreground text-base leading-relaxed mb-12 border-b border-dashed border-border pb-10">
-          This policy explains what data Socrate collects, why we collect it,
-          and how we use it. We've written it in plain English — no legal walls.
-        </p>
-
-        {/* Sections */}
-        <div className="space-y-12">
-          {sections.map((section) => (
-            <div key={section.title} className="border-b border-dashed border-border pb-10">
-              <h2 className="text-xl font-bold text-foreground mb-5">
-                {section.title}
-              </h2>
-              <div className="space-y-4">
-                {section.items.map((item) => (
-                  <p key={item.label} className="text-sm leading-relaxed text-muted-foreground">
-                    <span className="font-semibold text-foreground">{item.label}</span>{" "}
-                    {item.text}
-                  </p>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-      </div>
-    </div>
-    <Footer/>
-    </>
+    <LegalPage
+      title="Privacy Policy"
+      updated="March 28, 2026"
+      intro="This policy explains what data Socrate collects, why we collect it, and how we use it. We've written it in plain English — no legal walls."
+      sections={sections}
+    />
   );
 }
