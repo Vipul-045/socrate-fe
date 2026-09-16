@@ -4,7 +4,9 @@ import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import DodoProvider from "@/components/provider/dodo-provider";
+import { Space_Grotesk, Crimson_Text } from "next/font/google";
+import DodoProvider from "../components/provider/dodo-provider";
+import { UserProvider } from "@/components/provider/authoprovider";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -56,15 +58,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-ink focus:px-4 focus:py-2 focus:text-small focus:font-medium focus:text-card"
-        >
-          Skip to content
-        </a>
-        <DodoProvider />
+        <UserProvider>
+        <DodoProvider/>
         {children}
         <Toaster />
+        </UserProvider>
 
         <Script
           async
