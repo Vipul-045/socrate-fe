@@ -2,55 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ------------------------------------------------------------------
-   Socrate design tokens
-   Monochrome warm-paper palette. No accent hue — hierarchy is carried
-   by weight, size and hairlines instead of colour.
-   ------------------------------------------------------------------ */
 @layer base {
   :root {
-    /* Brand scale (HSL triplets so Tailwind can apply opacity) */
-    --paper: 39 24% 95%; /* #F5F3EF page ground        */
-    --surface: 40 27% 91%; /* #EFEBE3 recessed band      */
-    --card: 45 33% 98%; /* #FBFAF7 raised surface     */
-    --ink: 36 11% 9%; /* #1A1815 headings, buttons  */
-    --ink-soft: 36 8% 39%; /* #6B655C body copy          */
-    /* Small print and mono labels. Cannot go lighter than 41% L and
-       still clear 4.5:1 on both paper and surface — measured, not guessed. */
-    --ink-faint: 34 7% 40%; /* #6D675F mono labels        */
-    --line: 41 19% 87%; /* #E3DFD6 hairline           */
-    --line-strong: 41 17% 81%; /* #D6D1C6 emphasised rule    */
-    /* Form controls: their fill is nearly the page colour, so the border is
-       what identifies them. WCAG 1.4.11 wants 3:1 — this measures 3.12:1. */
-    --line-control: 38 12% 52%; /* #938976 input border      */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 9%;
+    --radius: 0.625rem;
+      --font-sans: var(--font-space-grotesk);
+  --font-serif: var(--font-crimson);
+  }
 
-    /* shadcn/ui contract, mapped onto the brand scale */
-    --background: var(--paper);
-    --foreground: var(--ink);
-    --card-foreground: var(--ink);
-    --popover: var(--card);
-    --popover-foreground: var(--ink);
-    --primary: var(--ink);
-    --primary-foreground: var(--card);
-    --secondary: var(--surface);
-    --secondary-foreground: var(--ink);
-    --muted: var(--surface);
-    --muted-foreground: var(--ink-soft);
-    --accent: var(--surface);
-    --accent-foreground: var(--ink);
-    --destructive: 4 62% 44%;
-    --destructive-foreground: 45 33% 98%;
-    --border: var(--line);
-    --input: var(--line-control);
-    --ring: var(--ink);
-    --radius: 0.5rem;
-    color-scheme: light;
-
-    --font-sans: var(--font-space-grotesk);
-    --font-mono: var(--font-plex-mono);
-
-    /* Vertical rhythm: one number drives every section on the site */
-    --section-y: clamp(3.5rem, 8vw, 7.5rem);
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 85%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 0% 98%;
   }
 }
 
@@ -58,51 +55,16 @@
   * {
     @apply border-border;
   }
-
-  html {
-    scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
-  }
-
   body {
-    @apply bg-paper text-ink antialiased;
-    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-    text-rendering: optimizeLegibility;
+    @apply bg-background text-foreground antialiased;
   }
-
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    @apply font-medium text-ink;
-    text-wrap: balance;
-  }
-
-  /* One visible focus treatment everywhere, including keyboard nav. */
-  :focus-visible {
-    outline: 2px solid hsl(var(--ink));
-    outline-offset: 3px;
-    border-radius: 2px;
-  }
-
-  ::selection {
-    background: hsl(var(--ink));
-    color: hsl(var(--card));
-  }
-
-  ::placeholder {
-    color: hsl(var(--ink-faint));
-  }
-}
-
-@layer components {
-  /* Mono label: uppercase, tracked, used for eyebrows, stat captions,
-     sequence numbers and dates. */
-  .u-label {
-    font-family: var(--font-mono), ui-monospace, monospace;
-    @apply text-[0.625rem] uppercase leading-none tracking-[0.14em] text-ink-faint sm:text-[0.6875rem] sm:tracking-[0.16em];
+    @apply tracking-tight font-bold text-foreground;
   }
 }
 
@@ -110,46 +72,58 @@
   .text-balance {
     text-wrap: balance;
   }
+}
 
-  .text-pretty {
-    text-wrap: pretty;
-  }
-
-  /* Diagonal hatch used for the demo-video placeholder well. */
-  .u-hatch {
-    background-image: repeating-linear-gradient(
-      -45deg,
-      hsl(var(--line) / 0.55) 0 1px,
-      transparent 1px 11px
-    );
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--line-strong));
-  border-radius: 4px;
+  background: hsl(var(--border));
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--ink-faint));
+  background: hsl(var(--muted-foreground));
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-delay: 0ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+.crimson-text-regular {
+  font-family: "Crimson Text", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.crimson-text-semibold {
+  font-family: "Crimson Text", serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.crimson-text-bold {
+  font-family: "Crimson Text", serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.crimson-text-regular-italic {
+  font-family: "Crimson Text", serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.crimson-text-semibold-italic {
+  font-family: "Crimson Text", serif;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.crimson-text-bold-italic {
+  font-family: "Crimson Text", serif;
+  font-weight: 700;
+  font-style: italic;
 }

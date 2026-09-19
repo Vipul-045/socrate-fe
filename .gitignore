@@ -3,10 +3,5 @@ node_modules
 .next
 .env
 .env.local
-<<<<<<< HEAD
 
 razorpayflow.md
-=======
-tsconfig.tsbuildinfo
-.DS_Store
->>>>>>> upstream/main

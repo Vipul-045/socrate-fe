@@ -1,19 +1,21 @@
-import { SiteShell } from "@/components/site/site-shell";
-import { Pricing } from "@/components/site/pricing/pricing";
-import { Faq } from "@/components/site/faq";
-import { CtaBand } from "@/components/site/cta-band";
+import { Navbar } from "@/components/landing/Navbar";
+import { Pricing } from "@/components/landing/pricing/Pricing";
+import { FAQ } from "@/components/landing/FAQ";
+import { Footer } from "@/components/landing/Footer";
 
 export const metadata = {
-  title: "Pricing",
+  title: "Pricing — Socrate",
   description: "Simple, transparent pricing. Start free. Upgrade when ready.",
 };
 
 export default function PricingPage() {
   return (
-    <SiteShell>
+    <div className="min-h-screen bg-[#f5f3ef]">
+      <Navbar />
+      <div className="pt-16" />
       <Pricing />
-      <Faq />
-      <CtaBand />
-    </SiteShell>
+      <FAQ />
+      <Footer />
+    </div>
   );
 }

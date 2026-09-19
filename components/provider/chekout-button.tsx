@@ -64,8 +64,8 @@ export function CheckoutButton({ label, planId, billingCycle }: CheckoutButtonPr
   };
 
   return (
-    <Button onClick={handleCheckout} disabled={isLoading} size="lg" block>
-      {isLoading ? "Opening checkout…" : label}
+    <Button onClick={handleCheckout} disabled={isLoading} className="mb-6">
+      {isLoading ? "Loading..." : label}
     </Button>
   );
 }

@@ -1,15 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
+import { Flame, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MonoLabel } from "@/components/site/primitives";
-import { ValueProps } from "@/components/site/value-props";
-import { FREE_TIER_NOTE } from "@/lib/content";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
+import { authClient } from "@/lib/auth-client";
 
-const GOOGLE_AUTH_URL = "https://socrate-backend-9eza.onrender.com/auth/google";
+export default function LoginPage() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
-function GoogleMark() {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.push("/dashboard");
+  };
+
   return (
     <div className="min-h-screen bg-foreground/[0.03] flex items-center justify-center px-4">
       <motion.div
@@ -69,41 +78,74 @@ function GoogleMark() {
             Continue with Google
           </Button>
 
-          <p className="mt-6 text-small text-ink-faint">{FREE_TIER_NOTE}</p>
+          {/* <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                or
+              </span>
+            </div>
+          </div>
 
-          <div className="mt-9 border-t border-line pt-7">
-            <p className="text-small text-ink-soft">
-              By continuing you agree to our{" "}
-              <Link
-                href="/terms"
-                className="text-ink underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink"
-              >
-                Terms &amp; Conditions
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="text-ink underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink"
-              >
-                Privacy Policy
-              </Link>
-              .
-            </p>
-            <p className="mt-5 text-small font-medium text-ink">
-              New to Socrate?{" "}
-              {/* Sign-up is the same Google flow — an account is created on
-                  first sign-in. */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Full name"
+                  className="pl-10 h-11"
+                  autoComplete="name"
+                />
+              </div>
+            )}
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="Email address"
+                className="pl-10 h-11"
+                autoComplete="email"
+              />
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                className="pl-10 pr-10 h-11"
+                autoComplete={isLogin ? "current-password" : "new-password"}
+              />
               <button
                 type="button"
-                onClick={() => window.open(GOOGLE_AUTH_URL, "_self")}
-                className="cursor-pointer py-2 font-medium underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                Create an account
+                //test
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
-            </p>
-          </div>
+            </div>
+            <Button type="submit" className="w-full h-11">
+              {isLogin ? "Sign In" : "Create Account"}
+            </Button>
+          </form> */}
+
+          {/* <p className="text-center text-sm text-muted-foreground mt-6">
+            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            <button
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-primary font-medium hover:underline"
+            >
+              {isLogin ? "Sign up" : "Sign in"}
+            </button>
+          </p> */}
         </div>
-      </section>
-    </main>
+      </motion.div>
+    </div>
   );
 }
