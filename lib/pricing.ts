@@ -53,10 +53,16 @@ export function resolveProductId(
 
 // Display-only pricing, also resolved server-side, kept in lockstep with
 // the product IDs above so the UI never shows a price the backend won't honor.
-export const PRO_DISPLAY_PRICING: Record<
-  Region,
-  { price: string; originalPrice: string | null; discountBadge: string | null }
-> = {
+export type DisplayPrice = {
+  price: string;
+  originalPrice: string | null;
+  discountBadge: string | null;
+  /** e.g. "/month" — only set where a UI renders the cycle next to the price. */
+  period?: string;
+  note?: string;
+};
+
+export const PRO_DISPLAY_PRICING: Record<Region, DisplayPrice> = {
   IN: { price: "₹399", originalPrice: "₹499", discountBadge: "20% off for First 100 Students*" },
   GLOBAL: { price: "$9", originalPrice: null, discountBadge: null },
 };

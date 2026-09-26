@@ -15,8 +15,9 @@ export type Plan = {
   name: string;
   description: string;
   badge?: string;
-  /** null when the plan has no price yet (Max). */
-  pricing: Record<BillingCycle, DisplayPrice> | null;
+  /** null when the plan has no price yet (Max); a cycle may be absent,
+      in which case the column falls back to `priceNote`. */
+  pricing: Partial<Record<BillingCycle, DisplayPrice>> | null;
   priceNote?: string;
   features: string[];
   cta: string;
@@ -44,14 +45,14 @@ function PlanCta({
 
   if (plan.kind === "disabled") {
     return (
-      <Button variant="outline" size="lg" block disabled>
+      <Button variant="outline" size="lg" className="w-full" disabled>
         {plan.cta}
       </Button>
     );
   }
 
   return (
-    <Button variant="outline" size="lg" block asChild>
+    <Button variant="outline" size="lg" className="w-full" asChild>
       <Link href={plan.href ?? "/login"}>{plan.cta}</Link>
     </Button>
   );

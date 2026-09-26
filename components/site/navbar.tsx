@@ -163,12 +163,12 @@ export function Navbar() {
           <div className="mt-auto flex flex-col gap-3 pt-10">
             {session ? (
               <>
-                <Button size="lg" block asChild>
+                <Button size="lg" className="w-full" asChild>
                   <Link href="/pricing">Hey {firstName ?? "there"}</Link>
                 </Button>
                 <Button
                   size="lg"
-                  block
+                  className="w-full"
                   variant="outline"
                   onClick={() => authClient.signOut()}
                 >
@@ -177,10 +177,10 @@ export function Navbar() {
               </>
             ) : (
               <>
-                <Button size="lg" block asChild>
+                <Button size="lg" className="w-full" asChild>
                   <Link href="/login">Get Started Free</Link>
                 </Button>
-                <Button size="lg" block variant="outline" asChild>
+                <Button size="lg" className="w-full" variant="outline" asChild>
                   <Link href="/login">Log In</Link>
                 </Button>
               </>
