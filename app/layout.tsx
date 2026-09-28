@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Space_Grotesk, Crimson_Text } from "next/font/google";
@@ -49,6 +50,8 @@ export default function RootLayout({
         {children}
         <Toaster />
         </UserProvider>
+
+        <Analytics />
 
         {GA_MEASUREMENT_IDS.length > 0 && (
           <>
