@@ -19,6 +19,8 @@ const crimsonText = Crimson_Text({
   style: ["normal", "italic"],
 });
 
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
 export const metadata: Metadata = {
   title: "Socrate Study Platform",
   description:
@@ -44,6 +46,24 @@ export default function RootLayout({
         {children}
         <Toaster />
         </UserProvider>
+
+        {GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              id="ga4-script"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_MEASUREMENT_ID}');
+              `}
+            </Script>
+          </>
+        )}
 
         <Script
           src="https://cdn.flowsery.com/main.js"
