@@ -33,7 +33,7 @@ export function ContactForm() {
         setStatus("error");
         setMessage(
           data.error ??
-            "That didn't send. Email support@socrate.ai and we'll pick it up there.",
+            "That didn't send. Email socratedotin@gmail.com and we'll pick it up there.",
         );
         return;
       }
@@ -44,7 +44,7 @@ export function ContactForm() {
     } catch {
       setStatus("error");
       setMessage(
-        "That didn't send. Email support@socrate.ai and we'll pick it up there.",
+        "That didn't send. Email socratedotin@gmail.com and we'll pick it up there.",
       );
     }
   }

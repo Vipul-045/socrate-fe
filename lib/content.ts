@@ -125,14 +125,14 @@ export const FAQS = [
 export const CONTACT_CHANNELS = [
   {
     label: "Support",
-    value: "support@socrate.ai",
-    href: "mailto:support@socrate.ai",
+    value: "socratedotin@gmail.com",
+    href: "mailto:socratedotin@gmail.com",
     description: "Account issues, uploads that won't process, billing.",
   },
   {
     label: "Privacy",
-    value: "privacy@socrate.in",
-    href: "mailto:privacy@socrate.in",
+    value: "socratedotin@gmail.com",
+    href: "mailto:socratedotin@gmail.com",
     description: "Data requests, deletion, and export.",
   },
   {

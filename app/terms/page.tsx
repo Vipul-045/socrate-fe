@@ -112,7 +112,7 @@ const sections = [
     items: [
       {
         label: "Questions?",
-        text: "Email us at legal@socrate.ai — we respond within 48 hours.",
+        text: "Email us at socratedotin@gmail.com — we respond within 48 hours.",
       },
     ],
   },

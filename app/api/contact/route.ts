@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[contact] delivery failed", error);
     return NextResponse.json(
-      { error: "We couldn't deliver that. Email support@socrate.ai instead." },
+      { error: "We couldn't deliver that. Email socratedotin@gmail.com instead." },
       { status: 502 },
     );
   }
