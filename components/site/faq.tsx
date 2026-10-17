@@ -31,7 +31,7 @@ export function Faq({
     <Section id="faqs" rule={rule} className="scroll-mt-20">
       <Container>
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
-          <div className="lg:col-span-6">
+          <div className="lg:sticky lg:top-[104px] lg:col-span-6 lg:self-start">
             <h2 className="text-h2 text-balance">{title}</h2>
             <p className="mt-5 max-w-[26ch] text-lede text-ink-soft">
               {description}

@@ -6,12 +6,12 @@ import { FOOTER_LINKS } from "@/lib/content";
 export function Footer() {
   return (
     <footer className="border-t border-line bg-paper">
-      <Container className="py-14 sm:py-20">
+      <Container className="py-[clamp(2.5rem,5vw,3.5rem)]">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <Link
               href="/"
-              className="inline-block py-1 text-[1.1875rem] font-bold tracking-[-0.02em] text-ink"
+              className="inline-block py-1 text-[1.0625rem] font-semibold tracking-[-0.02em] text-ink"
             >
               Socrate
             </Link>
@@ -34,9 +34,9 @@ export function Footer() {
           </nav>
         </div>
 
-        <Rule className="mt-10 sm:mt-12" />
+        <Rule className="mt-[clamp(1.75rem,3.5vw,2.5rem)] border-[#eae6de]" />
 
-        <p className="mt-7 text-small text-ink-faint">
+        <p className="mt-5 text-xs tracking-[0.01em] text-ink-muted">
           © {new Date().getFullYear()} Socrate. All rights reserved.
         </p>
       </Container>

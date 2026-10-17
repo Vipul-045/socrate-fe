@@ -57,7 +57,15 @@ export function MonoLabel({
   as: Tag = "p",
   ...props
 }: React.HTMLAttributes<HTMLElement> & { as?: "p" | "span" | "div" | "dt" }) {
-  return <Tag className={cn("u-label", className)} {...props} />;
+  return (
+    <Tag
+      className={cn(
+        "font-mono text-[11px] font-medium uppercase leading-[1.4] tracking-[0.14em] text-ink-muted",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 /* ------------------------------------------------------------------ *
@@ -136,19 +144,21 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("pb-[clamp(2.5rem,5vw,4.5rem)]", className)}>
-      <MonoLabel className="mb-6 sm:mb-8">{eyebrow}</MonoLabel>
-      <h1 className="max-w-[16ch] text-h1 text-balance">{title}</h1>
-      {(lede || action) && (
-        <div className="mt-6 flex flex-col gap-6 sm:mt-8 md:flex-row md:items-end md:justify-between md:gap-10">
+    <div className={cn("pb-[clamp(2.5rem,5vw,3.75rem)]", className)}>
+      <MonoLabel className="mb-[clamp(1.375rem,3vw,1.875rem)] tracking-[0.16em] text-ink-soft">
+        {eyebrow}
+      </MonoLabel>
+      <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between md:gap-10">
+        <div>
+          <h1 className="max-w-[760px] text-page text-balance">{title}</h1>
           {lede ? (
-            <p className="max-w-[32rem] text-lede text-ink-soft">{lede}</p>
-          ) : (
-            <span />
-          )}
-          {action ? <div className="shrink-0">{action}</div> : null}
+            <p className="mt-[clamp(1.25rem,2.6vw,1.75rem)] max-w-[520px] text-lede text-pretty text-ink-soft">
+              {lede}
+            </p>
+          ) : null}
         </div>
-      )}
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
     </div>
   );
 }

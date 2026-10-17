@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { SiteShell } from "@/components/site/site-shell";
-import { CtaBand } from "@/components/site/cta-band";
 import {
   Container,
   MonoLabel,
@@ -28,54 +27,41 @@ export default function BlogPage() {
             lede="Occasional essays on study methods, memory, and building an AI tutor that actually teaches."
           />
 
-          <ul>
+          <ul className="border-t border-line-strong">
             {POSTS.map((post) => (
-              <li key={post.slug} className="border-t border-line">
-                <article className="grid gap-4 py-10 sm:py-12 lg:grid-cols-12 lg:gap-10">
-                  <MonoLabel
-                    as="div"
-                    className="leading-[1.7] lg:col-span-3 lg:pt-2"
-                  >
-                    {formatPostDate(post.date)}
-                    <br />
-                    {post.readingMinutes} min read
-                  </MonoLabel>
+              <li key={post.slug} className="border-b border-line-strong">
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="group flex flex-wrap items-start gap-[clamp(1rem,4vw,4rem)] py-[clamp(1.75rem,3.6vw,2.75rem)] transition-colors duration-200 hover:bg-surface"
+                >
+                  <div className="flex w-[150px] flex-none flex-col gap-2">
+                    <MonoLabel as="span">{formatPostDate(post.date)}</MonoLabel>
+                    <MonoLabel as="span">{post.readingMinutes} min read</MonoLabel>
+                  </div>
 
-                  <div className="lg:col-span-9">
-                    <h2 className="text-h3 text-balance">
-                      <Link
-                        href={`/blog/${post.slug}`}
-                        className="transition-colors duration-200 hover:text-ink-soft"
-                      >
-                        {post.title}
-                      </Link>
-                    </h2>
-                    <p className="mt-4 max-w-prose text-body text-ink-soft text-pretty">
+                  <article className="min-w-0 max-w-[620px] flex-[1_1_340px]">
+                    <h2 className="text-h3 text-balance">{post.title}</h2>
+                    <p className="mt-3 text-body leading-[1.7] text-pretty text-ink-soft">
                       {post.excerpt}
                     </p>
-                    <Link
-                      href={`/blog/${post.slug}`}
-                      className="group mt-4 inline-flex items-center gap-2 py-2 text-small font-medium text-ink"
-                    >
+                    <span className="mt-[18px] inline-flex items-center gap-2 text-[13px] font-medium text-[#3f3b34]">
                       Read essay
                       <ArrowRight
-                        className="h-4 w-4 transition-transform duration-200 ease-calm group-hover:translate-x-1"
+                        className="h-3.5 w-3.5 transition-transform duration-200 ease-calm group-hover:translate-x-1"
                         aria-hidden
                       />
-                    </Link>
-                  </div>
-                </article>
+                    </span>
+                  </article>
+                </Link>
               </li>
             ))}
           </ul>
 
-          <p className="border-t border-line pt-10 text-small text-ink-faint">
+          <p className="mt-[clamp(1.75rem,3vw,2.25rem)] text-xs leading-relaxed text-ink-muted">
             More essays coming soon.
           </p>
         </Container>
       </Section>
-
-      <CtaBand />
     </SiteShell>
   );
 }

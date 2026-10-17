@@ -10,6 +10,5 @@ export async function Pricing() {
   const region = regionFromCountryCode(countryCode);
   const proPricing = PRO_DISPLAY_PRICING[region];
 
-
-  return <PricingClient />;
+  return <PricingClient proPricing={proPricing} />;
 }

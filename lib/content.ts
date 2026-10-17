@@ -23,6 +23,12 @@ export const FOOTER_LINKS = [
 export const FREE_TIER_NOTE =
   "Free to start · 3 PDFs every month · No card required";
 
+export const STATS = [
+  { value: "10K+", label: "PDFs analyzed" },
+  { value: "500K+", label: "Notes generated" },
+  { value: "4.9", label: "Average rating" },
+] as const;
+
 export const VALUE_PROPS = [
   {
     title: "3 PDFs / month",

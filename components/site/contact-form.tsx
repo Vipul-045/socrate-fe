@@ -94,7 +94,12 @@ export function ContactForm() {
       </Field>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-        <Button type="submit" size="lg" disabled={status === "sending"}>
+        <Button
+          type="submit"
+          size="lg"
+          className="h-[50px] rounded-lg px-[26px] text-[15px] tracking-[-0.008em]"
+          disabled={status === "sending"}
+        >
           {status === "sending" ? "Sending…" : "Send message"}
           <ArrowRight className="h-4 w-4" aria-hidden />
         </Button>

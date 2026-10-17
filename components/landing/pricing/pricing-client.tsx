@@ -1,19 +1,72 @@
-// components/pricing/pricing-client.tsx
 "use client";
 
-import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Reveal, RevealGroup } from "@/hooks/use-reveal";
+
+import { Button } from "@/components/ui/button";
+import { Container, MonoLabel, PageHeader, Section } from "@/components/site/primitives";
 import { GetMemberPlans, grantFreePlan, MemberPlan } from "@/lib/services";
 import { useUser } from "@/components/provider/authoprovider";
+import type { DisplayPrice } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
 
 const AppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
 
-export function PricingClient() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+const CURRENCY_SYMBOLS: Record<string, string> = { INR: "₹", USD: "$" };
+const symbolFor = (currency?: string) =>
+  CURRENCY_SYMBOLS[currency?.toUpperCase() ?? ""] ?? "₹";
+
+const planButton = "h-[46px] w-full rounded-lg text-sm";
+
+function FeatureList({ items, strong }: { items: string[]; strong?: boolean }) {
+  return (
+    <ul className="mt-7 flex flex-col gap-3">
+      {items.map((item) => (
+        <li
+          key={item}
+          className={cn(
+            "flex gap-2.5 text-small leading-normal",
+            strong
+              ? "text-[#3f3b34] before:text-ink"
+              : "text-ink-soft before:text-[#a39d91]",
+            "before:content-['·']",
+          )}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Column({
+  highlighted,
+  badge,
+  children,
+}: {
+  highlighted?: boolean;
+  badge?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col border-b border-line-strong px-0 py-[clamp(1.875rem,3.5vw,2.625rem)] lg:border-b-0 lg:px-[clamp(1.5rem,2.6vw,2.25rem)]",
+        highlighted && "border-x bg-card px-6 sm:px-8",
+      )}
+    >
+      {/* The badge row is always reserved so names, prices and buttons
+          share a baseline across the row. */}
+      <MonoLabel className={cn("h-[22px]", highlighted && "text-ink")}>
+        {badge ?? " "}
+      </MonoLabel>
+      {children}
+    </div>
+  );
+}
+
+export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
   const [plans, setPlans] = useState<MemberPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,119 +124,148 @@ export function PricingClient() {
     }
   };
 
+  const hasMaxPlan = plans.some((plan) => plan.name === "Max");
+
   return (
-    <section id="pricing" className="py-20 md:py-28 bg-muted/50">
-      <div className="max-w-6xl mx-auto px-6">
-        <Reveal>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Simple, transparent pricing
-            </h2>
-            <p className="text-muted-foreground text-lg">
-              Start free. Upgrade when you&apos;re ready.
-            </p>
-          </div>
-        </Reveal>
+    <Section id="pricing" className="pb-[clamp(4rem,8vw,6.5rem)]">
+      <Container>
+        <PageHeader
+          eyebrow="Pricing"
+          title="Simple, transparent pricing"
+          lede="Start free. Upgrade when you're ready."
+        />
 
         {loading && (
-          <p className="text-center text-muted-foreground">Loading plans…</p>
+          <p className="border-t border-line-strong py-16 text-small text-ink-soft">
+            Loading plans…
+          </p>
         )}
 
         {error && !loading && (
-          <p className="text-center text-destructive">{error}</p>
+          <p className="border-t border-line-strong py-6 text-small text-destructive">
+            {error}
+          </p>
         )}
 
-        {!loading && !error && (
-          <RevealGroup className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto" staggerMs={100}>
+        {!loading && plans.length > 0 && (
+          <div className="grid border-t border-line-strong lg:grid-cols-3">
             {plans.map((plan) => {
               const highlighted = plan.name === "Pro";
               const isFree = plan.price === 0;
               const isClaiming = claimingPlanId === plan._id;
+              const price = `${symbolFor(plan.currency)}${plan.price}`;
+              // Only show the promotional strike-through when it describes
+              // the price the backend is actually charging.
+              const promo =
+                highlighted && proPricing?.price === price ? proPricing : null;
 
               return (
-                <div
+                <Column
                   key={plan._id}
-                  className={`relative rounded-xl p-7 border transition-all ${
-                    highlighted
-                      ? "border-foreground bg-background shadow-xl shadow-foreground/5 scale-[1.02]"
-                      : "border-border bg-background"
-                  }`}
+                  highlighted={highlighted}
+                  badge={highlighted ? "Most popular" : undefined}
                 >
-                  {highlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-foreground text-background text-xs font-medium">
-                      Most Popular
-                    </div>
-                  )}
+                  <h2 className="mb-1.5 mt-3.5 text-title">{plan.name}</h2>
+                  <p className="text-small text-ink-soft">{plan.description}</p>
 
-                  <h3 className="font-semibold text-lg mb-1">{plan.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-
-                  <div className="mb-4">
-                    <span className="text-4xl font-bold">
-                      {isFree ? "0" : `₹${plan.price}`}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
+                  <div className="mt-[26px] flex flex-wrap items-baseline gap-x-2.5">
+                    {promo?.originalPrice ? (
+                      <span className="text-lg text-[#a39d91] line-through">
+                        {promo.originalPrice}
+                      </span>
+                    ) : null}
+                    <span className="text-price">{price}</span>
+                    <span className="text-small text-ink-soft">
                       {isFree ? "/forever" : "/month"}
                     </span>
                   </div>
+                  {promo?.discountBadge ? (
+                    <MonoLabel className="mt-2 text-xs tracking-[0.06em] text-[#7a6a2e]">
+                      {promo.discountBadge}
+                    </MonoLabel>
+                  ) : null}
 
-                  {isFree ? (
-                    <Button
-                      className="w-full mb-6"
-                      variant={highlighted ? "default" : "outline"}
-                      onClick={() => handleFreePlan(plan)}
-                      disabled={userLoading || isClaiming}
-                    >
-                      {isClaiming ? "Activating…" : "Get Started"}
-                    </Button>
-                  ) : plan.name === "Pro" ? (
-                    userInfo ? (
+                  <div className="mt-[26px]">
+                    {isFree ? (
                       <Button
-                        className="w-full mb-6"
-                        variant="default"
+                        variant="outline"
+                        className={planButton}
+                        onClick={() => handleFreePlan(plan)}
+                        disabled={userLoading || isClaiming}
+                      >
+                        {isClaiming ? "Activating…" : "Get Started"}
+                      </Button>
+                    ) : !highlighted ? (
+                      <Button variant="outline" className={planButton} asChild>
+                        <Link href="/login">Choose Plan</Link>
+                      </Button>
+                    ) : userInfo ? (
+                      <Button
+                        className={planButton}
                         onClick={() => router.push(`/checkout?planId=${plan._id}`)}
                       >
                         Start your 7 day free trial
                       </Button>
                     ) : (
                       <Button
-                        className="w-full mb-6"
-                        variant="default"
+                        className={planButton}
                         onClick={redirectToLogin}
                         disabled={userLoading}
                       >
                         Start your 7 day free trial
                       </Button>
-                    )
-                  ) : (
-                    <Button
-                      className="w-full mb-6"
-                      variant={highlighted ? "default" : "outline"}
-                      asChild
-                    >
-                      <Link href="/login">Choose Plan</Link>
-                    </Button>
-                  )}
+                    )}
+                  </div>
 
-                  <ul className="space-y-3">
-                    {plan.planFeatures
+                  <FeatureList
+                    strong={highlighted}
+                    items={plan.planFeatures
                       .filter((f) => f.enabled)
-                      .map((f) => (
-                        <li
-                          key={f.featureId}
-                          className="flex items-center gap-2 text-sm text-muted-foreground"
-                        >
-                          <Check className="h-4 w-4 text-foreground shrink-0" />
-                          {f.limit} {f.featureKey.replace(/_/g, " ")}/month
-                        </li>
-                      ))}
-                  </ul>
-                </div>
+                      .map((f) => `${f.limit} ${f.featureKey.replace(/_/g, " ")}/month`)}
+                  />
+                </Column>
               );
             })}
-          </RevealGroup>
+
+            {/* Max isn't sold yet; show it as announced until the backend
+                returns a real plan for it. */}
+            {!hasMaxPlan && (
+              <Column badge="Coming soon">
+                <h2 className="mb-1.5 mt-3.5 text-title">Max</h2>
+                <p className="text-small text-ink-soft">For practical studies</p>
+                <div className="mt-[26px] flex min-h-[clamp(2.375rem,4.4vw,3.25rem)] items-baseline">
+                  <MonoLabel className="text-[13px] tracking-[0.08em]">
+                    Pricing to be announced
+                  </MonoLabel>
+                </div>
+                <div className="mt-[26px]">
+                  <Button
+                    variant="outline"
+                    className={cn(planButton, "border-[#eae6de] text-ink-muted")}
+                    disabled
+                  >
+                    Coming soon
+                  </Button>
+                </div>
+                <FeatureList
+                  items={[
+                    "Everything in Pro",
+                    "Collaborate with friends",
+                    "Extended premium chats",
+                    "AI video generations",
+                    "Priority support",
+                  ]}
+                />
+              </Column>
+            )}
+          </div>
         )}
-      </div>
-    </section>
+
+        <p className="mt-[clamp(1.75rem,3vw,2.25rem)] border-t border-[#eae6de] pt-5 text-xs leading-relaxed text-ink-muted">
+          Prices shown in your local currency. All plans billed securely; cancel
+          anytime from Settings.
+        </p>
+      </Container>
+    </Section>
   );
 }

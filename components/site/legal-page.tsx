@@ -34,24 +34,28 @@ export function LegalPage({
     <SiteShell>
       <Section>
         <Container>
-          <MonoLabel>Last updated: {updated}</MonoLabel>
-          <h1 className="mt-6 max-w-[16ch] text-h1 sm:mt-8">{title}</h1>
-          <p className="mt-6 max-w-[34rem] text-lede text-ink-soft text-pretty sm:mt-8">
+          <MonoLabel className="tracking-[0.16em] text-ink-soft">
+            Last updated: {updated}
+          </MonoLabel>
+          <h1 className="mt-[clamp(1.375rem,3vw,1.875rem)] text-page text-balance">
+            {title}
+          </h1>
+          <p className="mt-[clamp(1.25rem,2.6vw,1.75rem)] max-w-[560px] text-lede text-pretty text-ink-soft">
             {intro}
           </p>
 
-          <div className="mt-[clamp(2.5rem,5vw,4.5rem)] grid gap-x-10 gap-y-10 lg:grid-cols-12">
+          <div className="mt-[clamp(2.5rem,5vw,3.75rem)] grid items-start gap-[clamp(2rem,5vw,4.5rem)] lg:grid-cols-[minmax(220px,1fr)_minmax(0,2fr)]">
             <nav
               aria-label="Contents"
-              className="border-t border-line pt-7 lg:col-span-4"
+              className="border-t border-line-strong pt-[18px] lg:sticky lg:top-[104px]"
             >
               <MonoLabel as="p">Contents</MonoLabel>
-              <ul className="mt-6">
+              <ul className="mt-3.5 flex flex-col gap-[9px]">
                 {sections.map((section) => (
                   <li key={section.title}>
                     <a
                       href={`#${slug(section.title)}`}
-                      className="text-body text-ink-soft transition-colors duration-200 hover:text-ink"
+                      className="text-small text-ink-soft transition-colors duration-200 hover:text-ink"
                     >
                       {section.title}
                     </a>
@@ -60,28 +64,28 @@ export function LegalPage({
               </ul>
             </nav>
 
-            <div className="border-t border-line lg:col-span-7 lg:col-start-6">
+            <div className="max-w-[720px] border-b border-line-strong">
               {sections.map((section, i) => (
                 <section
                   key={section.title}
                   id={slug(section.title)}
-                  className="grid scroll-mt-24 gap-y-5 border-b border-line py-10 sm:py-12 lg:grid-cols-[3.25rem_1fr] lg:gap-y-0"
+                  className="flex scroll-mt-[104px] gap-[clamp(1rem,2.4vw,1.75rem)] border-t border-line-strong py-[clamp(1.75rem,3.4vw,2.5rem)]"
                 >
-                  <MonoLabel as="p" className="lg:pt-2.5">
+                  <MonoLabel as="span" className="flex-none pt-[5px]">
                     {String(i + 1).padStart(2, "0")}
                   </MonoLabel>
 
-                  <div>
-                    <h2 className="text-[clamp(1.25rem,1.8vw,1.5rem)] font-semibold leading-snug tracking-[-0.018em]">
+                  <div className="min-w-0">
+                    <h2 className="mb-[clamp(1rem,2vw,1.375rem)] text-[clamp(1.1875rem,2vw,1.4375rem)] font-medium leading-tight tracking-[-0.022em]">
                       {section.title}
                     </h2>
-                    <div className="mt-6 space-y-5">
+                    <div className="flex flex-col gap-4">
                       {section.items.map((item) => (
                         <p
                           key={item.label}
-                          className="text-body text-ink-soft text-pretty"
+                          className="text-body leading-[1.7] text-pretty text-ink-soft"
                         >
-                          <span className="font-semibold text-ink">
+                          <span className="font-medium text-ink">
                             {item.label}
                           </span>{" "}
                           {item.text}

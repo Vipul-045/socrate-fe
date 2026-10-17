@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const controlClasses =
-  "w-full rounded-lg border border-line-control bg-card px-4 py-3.5 text-body text-ink transition-colors duration-200 hover:border-ink/45 focus:border-ink focus:outline-none focus-visible:outline-none disabled:opacity-60";
+  "w-full rounded-lg border border-line-control bg-card px-3.5 py-3 text-body text-ink placeholder:text-[#9c968b] transition-colors duration-200 hover:border-ink/45 focus:border-ink focus:outline-none focus-visible:outline-none disabled:opacity-60";
 
 export function Field({
   label,
@@ -20,8 +20,8 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <label htmlFor={htmlFor} className="text-small font-medium text-ink">
+    <div className={cn("flex flex-col gap-[9px]", className)}>
+      <label htmlFor={htmlFor} className="text-[13px] font-medium tracking-[-0.008em] text-ink">
         {label}
       </label>
       {children}

@@ -25,16 +25,16 @@ export default function ContactPage() {
             lede="Questions, bug reports, student discounts, or partnerships — a real person reads every message and replies within 48 hours."
           />
 
-          <div className="grid gap-12 border-t border-line pt-12 lg:grid-cols-12 lg:gap-16 lg:pt-16">
-            <dl className="flex flex-col gap-10 lg:col-span-4">
+          <div className="grid gap-[clamp(2.25rem,5vw,4.5rem)] border-t border-line-strong pt-[clamp(2.25rem,4.5vw,3.5rem)] lg:grid-cols-12">
+            <dl className="flex flex-col gap-[clamp(1.625rem,3vw,2.125rem)] lg:col-span-4">
               {CONTACT_CHANNELS.map((channel) => (
                 <div key={channel.label}>
                   <MonoLabel as="dt">{channel.label}</MonoLabel>
-                  <dd className="mt-3 text-title">
+                  <dd className="mt-2 text-base font-medium tracking-[-0.012em]">
                     {"href" in channel && channel.href ? (
                       <a
                         href={channel.href}
-                        className="underline decoration-line-strong underline-offset-4 transition-colors hover:decoration-ink"
+                        className="transition-colors hover:text-ink-soft"
                       >
                         {channel.value}
                       </a>
@@ -42,7 +42,7 @@ export default function ContactPage() {
                       channel.value
                     )}
                   </dd>
-                  <dd className="mt-2 max-w-[32ch] text-small text-ink-soft">
+                  <dd className="mt-2 max-w-[280px] text-small text-ink-soft">
                     {channel.description}
                   </dd>
                 </div>
