@@ -9,12 +9,14 @@ import {
   Section,
 } from "@/components/site/primitives";
 import { POSTS, formatPostDate } from "@/lib/blog";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Blog",
   description:
     "Occasional essays on study methods, memory, and building an AI tutor that actually teaches.",
-};
+  path: "/blog",
+});
 
 export default function BlogPage() {
   return (

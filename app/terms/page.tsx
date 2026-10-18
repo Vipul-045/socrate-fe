@@ -1,6 +1,12 @@
 import { LegalPage, type LegalSection } from "@/components/site/legal-page";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Terms & Conditions – Socrate" };
+export const metadata = pageMetadata({
+  title: "Terms & Conditions",
+  description:
+    "The terms for using Socrate: your account, the documents you upload, payments and subscriptions, and our responsibilities to you.",
+  path: "/terms",
+});
 
 const sections: LegalSection[] = [
   {

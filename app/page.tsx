@@ -7,10 +7,20 @@ import { WhoItsFor } from "@/components/site/who-its-for";
 import { LatestPosts } from "@/components/site/latest-posts";
 import { Faq } from "@/components/site/faq";
 import { CtaBand } from "@/components/site/cta-band";
+import { JsonLd } from "@/components/site/json-ld";
+import { DEFAULT_TITLE, homeJsonLd, pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: { absolute: `${DEFAULT_TITLE} — AI Tutor for Your PDFs` },
+  description:
+    "Upload any PDF and have an AI tutor explain, summarize, and quiz you instantly. Every answer cites the page it came from. Free to start, no card required.",
+  path: "/",
+});
 
 export default function HomePage() {
   return (
     <SiteShell>
+      <JsonLd data={homeJsonLd()} />
       <Hero />
       <DemoVideo />
       <Showcase />

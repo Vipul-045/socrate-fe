@@ -5,7 +5,9 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { SiteShell } from "@/components/site/site-shell";
 import { Button } from "@/components/ui/button";
 import { Container, MonoLabel } from "@/components/site/primitives";
+import { JsonLd } from "@/components/site/json-ld";
 import { POSTS, getPost, formatPostDate, type Block } from "@/lib/blog";
+import { blogPostJsonLd, pageMetadata } from "@/lib/seo";
 
 type Params = Promise<{ slug: string }>;
 
@@ -16,7 +18,12 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Params }) {
   const post = getPost((await params).slug);
   if (!post) return { title: "Not found" };
-  return { title: post.title, description: post.excerpt };
+  return pageMetadata({
+    title: post.title,
+    description: post.excerpt,
+    path: `/blog/${post.slug}`,
+    article: { publishedTime: post.date, section: post.category },
+  });
 }
 
 /** Essay body is set in Crimson; headings drop back to the sans. */
@@ -72,6 +79,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
 
   return (
     <SiteShell>
+      <JsonLd data={blogPostJsonLd(post)} />
       <article className="bg-paper pb-[clamp(3.5rem,7vw,5.5rem)] pt-[clamp(3rem,6vw,5rem)]">
         <Container>
           <div className="mx-auto max-w-[680px]">

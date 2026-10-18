@@ -7,12 +7,14 @@ import {
   Section,
 } from "@/components/site/primitives";
 import { CONTACT_CHANNELS } from "@/lib/content";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Contact",
   description:
     "Questions, bug reports, student discounts, or partnerships — a real person reads every message.",
-};
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (

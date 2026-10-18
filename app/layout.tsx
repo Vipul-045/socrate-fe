@@ -6,6 +6,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Space_Grotesk, Crimson_Text } from "next/font/google";
 import DodoProvider from "../components/provider/dodo-provider";
 import { UserProvider } from "@/components/provider/authoprovider";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  LOCALE,
+  SITE_NAME,
+  SITE_URL,
+  TITLE_TEMPLATE,
+} from "@/lib/seo";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -25,10 +33,26 @@ const GA_MEASUREMENT_IDS = (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "")
   .map((id) => id.trim())
   .filter(Boolean);
 
+// Site-wide defaults. Canonicals and index directives are set per page
+// (lib/seo.ts → pageMetadata), never here — every route would inherit them.
 export const metadata: Metadata = {
-  title: "Socrate Study Platform",
-  description:
-    "Upload any PDF and have an AI tutor explain, summarize, and quiz you instantly.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: DEFAULT_TITLE,
+    template: TITLE_TEMPLATE,
+  },
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: LOCALE,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
   icons: {
     icon: "/icon.png",
   },
