@@ -90,6 +90,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             <div className="mb-[clamp(1.25rem,2.4vw,1.75rem)] flex flex-wrap gap-[18px]">
               <MonoLabel as="span">{formatPostDate(post.date)}</MonoLabel>
               <MonoLabel as="span">{post.readingMinutes} min read</MonoLabel>
+              <MonoLabel as="span">{post.category}</MonoLabel>
             </div>
             <h1 className="text-[clamp(1.875rem,4.4vw,2.875rem)] font-medium leading-[1.1] tracking-[-0.033em] text-balance">
               {post.title}

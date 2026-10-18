@@ -48,17 +48,17 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-paper/95 supports-[backdrop-filter]:bg-paper/[0.82] supports-[backdrop-filter]:backdrop-blur-[18px]">
-      <Container className="flex h-16 items-center justify-between gap-6 lg:h-[68px]">
+      <Container className="flex h-16 items-center gap-6 lg:h-[68px]">
         <Link
           href="/"
-          className="-my-1 inline-block py-1 text-[1.0625rem] font-semibold tracking-[-0.02em] text-ink"
+          className="-my-1 mr-auto inline-block py-1 text-[1.0625rem] font-semibold tracking-[-0.02em] text-ink"
           aria-label="Socrate — home"
         >
           Socrate
         </Link>
 
         <nav aria-label="Main" className="hidden lg:block">
-          <ul className="-my-2 flex items-center gap-8 xl:gap-9">
+          <ul className="-my-2 flex items-center gap-[clamp(1.125rem,2.4vw,2.125rem)]">
             {NAV_LINKS.map((link) => (
               <li key={link.label}>
                 <Link
@@ -78,7 +78,7 @@ export function Navbar() {
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-1.5 pl-[clamp(0.375rem,1.6vw,1.25rem)] lg:flex">
           {session ? (
             <>
               <Button

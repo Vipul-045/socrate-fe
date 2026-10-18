@@ -29,6 +29,23 @@ export const STATS = [
   { value: "4.9", label: "Average rating" },
 ] as const;
 
+export const STUDY_PILLARS_HEADING = "Everything you need to study better";
+
+export const STUDY_PILLARS = [
+  {
+    title: "Understand",
+    description: "Turn difficult topics into simple explanations.",
+  },
+  {
+    title: "Practice",
+    description: "Generate quizzes, questions and exams from your material.",
+  },
+  {
+    title: "Revise",
+    description: "Create structured notes and flashcards in seconds.",
+  },
+] as const;
+
 export const VALUE_PROPS = [
   {
     title: "3 PDFs / month",
@@ -44,20 +61,80 @@ export const VALUE_PROPS = [
   },
 ] as const;
 
-export const STEPS = [
+export const SHOWCASE = {
+  understand: {
+    eyebrow: "01 — Understand",
+    title: "Ask anything. Get answers that point to the page.",
+    body: "Chat with your document in plain language. Socrate explains difficult passages step by step and cites the exact section it drew from, so you can always check the source.",
+  },
+  practice: {
+    eyebrow: "02 — Practice",
+    title: "Quiz yourself before the exam does.",
+    body: "Socrate turns your material into questions drawn from what you uploaded. Answering them is how knowledge sticks, and every wrong answer shows you exactly where to look next.",
+  },
+  revise: {
+    eyebrow: "03 — Revise",
+    title: "Notes worth revising from.",
+    body: "Generate structured study notes in one click: key concepts, definitions, and summaries in a clean outline. Download them as a PDF to review offline or print before the exam.",
+  },
+} as const;
+
+export const JOURNEY = [
   {
-    title: "Upload your PDF",
+    title: "Upload",
+    lead: "Bring your study material",
     description:
-      "Drag and drop any document into Socrate. We support all PDF formats.",
+      "Drop in textbooks, lecture slides, papers, or your own notes. Socrate reads every page.",
+    tags: ["PDFs"],
   },
   {
-    title: "Ask questions or generate notes",
+    title: "Understand",
+    lead: "Ask questions, search PDFs and get explanations",
     description:
-      "Chat with your document or let AI create comprehensive study notes for you.",
+      "Plain-language answers that cite the page they came from, so you can always check the source.",
+    tags: ["AI Chat", "Search"],
   },
   {
-    title: "Download & study smarter",
-    description: "Export your notes, review key concepts, and ace your exams.",
+    title: "Practice",
+    lead: "Generate quizzes, questions and exam-style tests",
+    description:
+      "Test yourself on your own material and see exactly where you went wrong.",
+    tags: ["Quizzes", "Exams"],
+  },
+  {
+    title: "Revise",
+    lead: "Create notes and flashcards and review key concepts",
+    description:
+      "Structured notes and flashcards you can review right up to exam day.",
+    tags: ["Notes", "Flashcards"],
+  },
+] as const;
+
+export const TOOLS = [
+  "PDFs",
+  "AI Chat",
+  "Notes",
+  "Search",
+  "Quizzes",
+  "Flashcards",
+  "Exams",
+] as const;
+
+export const AUDIENCES = [
+  {
+    title: "Students",
+    description:
+      "Turn lecture slides and textbook chapters into explanations, practice questions, and revision notes ahead of every exam.",
+  },
+  {
+    title: "Researchers",
+    description:
+      "Get through dense papers faster. Ask about methods and findings, and get answers tied back to the exact section.",
+  },
+  {
+    title: "Lifelong learners",
+    description:
+      "Pick up a new subject from books and reports on your own schedule, with a tutor that never runs out of patience.",
   },
 ] as const;
 

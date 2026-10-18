@@ -20,6 +20,7 @@ export type Post = {
   title: string;
   date: string; // ISO — formatted at render time
   readingMinutes: number;
+  category: string;
   excerpt: string;
   body: Block[];
 };
@@ -30,6 +31,7 @@ export const POSTS: Post[] = [
     title: "Why re-reading your notes doesn't work",
     date: "2026-03-24",
     readingMinutes: 6,
+    category: "Study methods",
     excerpt:
       "Highlighting feels like studying, but recognition isn't recall. A look at the retrieval-practice research and how to restructure a study session around questions instead of passes.",
     body: [
@@ -90,6 +92,7 @@ export const POSTS: Post[] = [
     title: "How we built an AI tutor that cites its sources",
     date: "2026-03-11",
     readingMinutes: 4,
+    category: "Product",
     excerpt:
       "An AI that sounds confident is easy. An AI you can check is harder. Notes on the retrieval layer behind Socrate and why every answer points back to a page in your PDF.",
     body: [
@@ -131,6 +134,11 @@ export const POSTS: Post[] = [
     ],
   },
 ];
+
+/** Newest first. */
+export function latestPosts(n = POSTS.length): Post[] {
+  return [...POSTS].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, n);
+}
 
 export function getPost(slug: string): Post | undefined {
   return POSTS.find((post) => post.slug === slug);
