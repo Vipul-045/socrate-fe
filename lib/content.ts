@@ -207,16 +207,11 @@ export const FAQS = [
 
 export const CONTACT_CHANNELS = [
   {
-    label: "Support",
-    value: "socratedotin@gmail.com",
-    href: "mailto:socratedotin@gmail.com",
-    description: "Account issues, uploads that won't process, billing.",
-  },
-  {
-    label: "Privacy",
-    value: "socratedotin@gmail.com",
-    href: "mailto:socratedotin@gmail.com",
-    description: "Data requests, deletion, and export.",
+    label: "Email",
+    value: "hello@socrate.in",
+    href: "mailto:hello@socrate.in",
+    description:
+      "Account help, billing, uploads that won't process, and data export or deletion.",
   },
   {
     label: "Response time",

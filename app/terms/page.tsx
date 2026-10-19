@@ -117,7 +117,7 @@ const sections: LegalSection[] = [
     items: [
       {
         label: "Questions?",
-        text: "Email us at socratedotin@gmail.com — we respond within 48 hours.",
+        text: "Email us at hello@socrate.in — we respond within 48 hours.",
       },
     ],
   },

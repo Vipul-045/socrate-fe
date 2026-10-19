@@ -20,7 +20,7 @@ const schema = z.object({
   message: z.string().trim().min(10).max(5000),
 });
 
-const DELIVERY_ERROR = "We couldn't deliver that. Email socratedotin@gmail.com instead.";
+const DELIVERY_ERROR = "We couldn't deliver that. Email hello@socrate.in instead.";
 
 export async function POST(request: Request) {
   let body: unknown;

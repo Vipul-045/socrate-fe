@@ -111,7 +111,7 @@ export function pageMetadata({
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 const WEBSITE_ID = `${SITE_URL}/#website`;
 
-const SUPPORT = CONTACT_CHANNELS.find((channel) => channel.label === "Support");
+const SUPPORT = CONTACT_CHANNELS.find((channel) => channel.label === "Email");
 
 function organization() {
   return {
