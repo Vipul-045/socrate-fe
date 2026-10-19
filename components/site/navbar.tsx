@@ -8,7 +8,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/site/primitives";
 import { NAV_LINKS } from "@/lib/content";
-import { authClient } from "@/lib/auth-client";
+import { useUser } from "@/components/provider/authoprovider";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
@@ -19,7 +19,9 @@ function isActive(pathname: string, href: string) {
 export function Navbar() {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
-  const { data: session } = authClient.useSession();
+  // Same backend session the pricing and checkout pages read, so the nav
+  // and the plan buttons always agree on who's signed in.
+  const { userInfo, isLoading, logout } = useUser();
 
   // Close on route change and lock the body while the panel is open.
   useEffect(() => setOpen(false), [pathname]);
@@ -44,7 +46,16 @@ export function Navbar() {
     };
   }, [open]);
 
-  const firstName = session?.user?.name?.split(" ")[0];
+  const firstName = userInfo?.name?.split(" ")[0];
+
+  // logout() clears the user and membership even if the backend call fails;
+  // LogOutUser has already logged the error.
+  const handleLogout = async () => {
+    setOpen(false);
+    try {
+      await logout();
+    } catch {}
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-paper/95 supports-[backdrop-filter]:bg-paper/[0.82] supports-[backdrop-filter]:backdrop-blur-[18px]">
@@ -78,14 +89,17 @@ export function Navbar() {
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-1.5 pl-[clamp(0.375rem,1.6vw,1.25rem)] lg:flex">
-          {session ? (
+        {/* Hidden, not removed, while the session check is in flight so the
+            row doesn't flash "Log In" at a signed-in reader. */}
+        <div
+          className={cn(
+            "hidden items-center gap-1.5 pl-[clamp(0.375rem,1.6vw,1.25rem)] lg:flex",
+            isLoading && "invisible",
+          )}
+        >
+          {userInfo ? (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => authClient.signOut()}
-              >
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 Log out
               </Button>
               <Button size="sm" asChild>
@@ -105,9 +119,11 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <Button size="sm" className="hidden px-5 sm:inline-flex" asChild>
-            <Link href="/login">Get Started Free</Link>
-          </Button>
+          {!isLoading && !userInfo && (
+            <Button size="sm" className="hidden px-5 sm:inline-flex" asChild>
+              <Link href="/login">Get Started Free</Link>
+            </Button>
+          )}
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -146,7 +162,7 @@ export function Navbar() {
           </nav>
 
           <div className="mt-auto flex flex-col gap-3 pt-10">
-            {session ? (
+            {userInfo ? (
               <>
                 <Button size="lg" className="w-full" asChild>
                   <Link href="/pricing">Hey {firstName ?? "there"}</Link>
@@ -155,7 +171,7 @@ export function Navbar() {
                   size="lg"
                   className="w-full"
                   variant="outline"
-                  onClick={() => authClient.signOut()}
+                  onClick={handleLogout}
                 >
                   Log out
                 </Button>

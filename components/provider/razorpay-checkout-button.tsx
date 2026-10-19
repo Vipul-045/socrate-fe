@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/provider/authoprovider";
+import { createRazorpayOrder, verifyRazorpayPayment } from "@/lib/services";
 import { useState } from "react";
 import type { RazorpayPaymentResponse } from "@/types/razorpay";
 
@@ -52,20 +53,11 @@ export function RazorpayCheckoutButton({
       }
 
       // Backend looks up the plan, creates the Razorpay order, and persists
-      // an Order record — this route is a thin proxy to it.
-      const res = await fetch("/api/payments/razorpay/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
-      });
+      // an Order record.
+      const data = await createRazorpayOrder(planId);
+      if (!data?.success) throw new Error("Failed to create order");
 
-      if (!res.ok) throw new Error("Failed to create order");
-
-      const data = await res.json();
-      const { order, keyId } = data as {
-        order?: { id: string; amount: number; currency: string };
-        keyId?: string;
-      };
+      const { order, key_id: keyId } = data;
 
       if (!order?.id || !keyId) {
         throw new Error("Invalid order response");
@@ -86,17 +78,8 @@ export function RazorpayCheckoutButton({
         theme: { color: "#000000" },
         handler: async (response: RazorpayPaymentResponse) => {
           try {
-            const verifyRes = await fetch("/api/payments/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-
-            if (!verifyRes.ok) throw new Error("Payment verification failed");
+            const verified = await verifyRazorpayPayment(response);
+            if (!verified?.success) throw new Error("Payment verification failed");
 
             await refresh(); // pick up the new membership before leaving
             window.location.href = AppUrl;

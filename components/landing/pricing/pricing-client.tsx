@@ -72,8 +72,12 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
   const [error, setError] = useState<string | null>(null);
   const [claimingPlanId, setClaimingPlanId] = useState<string | null>(null);
 
-  const { userInfo, isLoading: userLoading, refresh } = useUser();
+  const { userInfo, membership, isLoading: userLoading, refresh } = useUser();
   const router = useRouter();
+
+  // The backend only returns a membership when it's active.
+  const currentPlan = membership?.plan ?? null;
+  const hasPaidPlan = (currentPlan?.price ?? 0) > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +157,7 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
               const highlighted = plan.name === "Pro";
               const isFree = plan.price === 0;
               const isClaiming = claimingPlanId === plan._id;
+              const isCurrent = currentPlan?.planId === plan._id;
               const price = `${symbolFor(plan.currency)}${plan.price}`;
               // Only show the promotional strike-through when it describes
               // the price the backend is actually charging.
@@ -186,14 +191,28 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
                   ) : null}
 
                   <div className="mt-[26px]">
-                    {isFree ? (
+                    {isCurrent ? (
+                      <Button
+                        variant={highlighted ? "default" : "outline"}
+                        className={planButton}
+                        disabled
+                      >
+                        {isFree ? "Your current plan" : `You're a ${plan.name} member`}
+                      </Button>
+                    ) : isFree ? (
+                      // A paid member can't drop to Free from here — the
+                      // backend refuses it until the paid plan is cancelled.
                       <Button
                         variant="outline"
                         className={planButton}
                         onClick={() => handleFreePlan(plan)}
-                        disabled={userLoading || isClaiming}
+                        disabled={userLoading || isClaiming || hasPaidPlan}
                       >
-                        {isClaiming ? "Activating…" : "Get Started"}
+                        {hasPaidPlan
+                          ? `Included in ${currentPlan?.name}`
+                          : isClaiming
+                            ? "Activating…"
+                            : "Get Started"}
                       </Button>
                     ) : !highlighted ? (
                       <Button variant="outline" className={planButton} asChild>
