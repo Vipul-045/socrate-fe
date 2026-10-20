@@ -36,7 +36,7 @@ export default function ContactPage() {
                     {"href" in channel && channel.href ? (
                       <a
                         href={channel.href}
-                        className="transition-colors hover:text-ink-soft"
+                        className="-my-3 inline-block py-3 transition-colors hover:text-ink-soft"
                       >
                         {channel.value}
                       </a>

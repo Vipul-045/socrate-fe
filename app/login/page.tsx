@@ -36,12 +36,13 @@ export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <div className="grid min-h-screen bg-paper text-ink lg:grid-cols-2">
-      {/* Brand panel */}
-      <section className="flex min-w-0 flex-col justify-between gap-12 border-b border-line bg-surface px-[clamp(1.5rem,4.5vw,4rem)] pb-[clamp(2rem,4vw,3rem)] pt-[clamp(1.75rem,4vw,2.75rem)] lg:border-b-0 lg:border-r">
+    <div className="grid min-h-dvh bg-paper text-ink lg:grid-cols-2">
+      {/* Brand panel. Below lg it follows the form: on a phone the reason
+          you came here — signing in — should be on the first screen. */}
+      <section className="order-last flex min-w-0 flex-col justify-between gap-12 border-t border-line bg-surface pl-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-left))] pr-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-right))] pb-[max(clamp(2rem,4vw,3rem),env(safe-area-inset-bottom))] pt-[clamp(2.5rem,4vw,2.75rem)] lg:order-none lg:border-r lg:border-t-0">
         <Link
           href="/"
-          className="self-start text-[1.0625rem] font-semibold tracking-[-0.02em]"
+          className="-my-2.5 hidden self-start py-2.5 text-[1.0625rem] font-semibold tracking-[-0.02em] lg:block"
         >
           Socrate
         </Link>
@@ -72,8 +73,14 @@ export default function LoginPage() {
       </section>
 
       {/* Sign-in panel */}
-      <section className="flex min-w-0 flex-col justify-center px-[clamp(1.5rem,4.5vw,4rem)] py-[clamp(3.5rem,7vw,5rem)]">
-        <div className="mx-auto w-full max-w-[400px]">
+      <section className="flex min-w-0 flex-col pl-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-left))] pr-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-right))] pb-[clamp(3rem,7vw,5rem)] pt-[max(1rem,env(safe-area-inset-top))] lg:justify-center lg:pt-[clamp(3.5rem,7vw,5rem)]">
+        <Link
+          href="/"
+          className="inline-flex h-12 items-center self-start text-[1.0625rem] font-semibold tracking-[-0.02em] lg:hidden"
+        >
+          Socrate
+        </Link>
+        <div className="mx-auto mt-[clamp(2.5rem,10vw,4.5rem)] w-full max-w-[400px] lg:mt-0">
           <h1 className="text-[clamp(1.625rem,3vw,2.125rem)] font-medium leading-[1.1] tracking-[-0.032em]">
             {isLogin ? "Welcome back" : "Create your account"}
           </h1>
@@ -110,7 +117,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setIsLogin((v) => !v)}
-              className={`self-start text-[13px] font-medium ${underlined}`}
+              className={`-my-3 self-start py-3 text-left text-[13px] font-medium ${underlined}`}
             >
               {isLogin
                 ? "New to Socrate? Create an account"

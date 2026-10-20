@@ -1,8 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+// 16px on phones: iOS Safari zooms the page into any control set smaller.
 const controlClasses =
-  "w-full rounded-lg border border-line-control bg-card px-3.5 py-3 text-body text-ink placeholder:text-[#9c968b] transition-colors duration-200 hover:border-ink/45 focus:border-ink focus:outline-none focus-visible:outline-none disabled:opacity-60";
+  "w-full rounded-lg border border-line-control bg-card px-3.5 py-3 text-base text-ink sm:text-body placeholder:text-[#9c968b] transition-colors duration-200 hover:border-ink/45 focus:border-ink focus:outline-none focus-visible:outline-none disabled:opacity-60";
 
 export function Field({
   label,

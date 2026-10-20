@@ -85,7 +85,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
           <div className="mx-auto max-w-[680px]">
           <Link
             href="/blog"
-            className="group mb-[clamp(2rem,4vw,3rem)] inline-flex items-center gap-2 text-[13px] font-medium text-ink-soft transition-colors hover:text-ink"
+            className="group -mt-3 mb-[calc(clamp(2rem,4vw,3rem)_-_0.75rem)] inline-flex items-center gap-2 py-3 text-[13px] font-medium text-ink-soft transition-colors hover:text-ink"
           >
             <ArrowLeft
               className="h-3.5 w-3.5 transition-transform duration-200 ease-calm group-hover:-translate-x-1"
@@ -121,7 +121,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
                 Free to start · No card required
               </p>
             </div>
-            <Button className="h-12 rounded-lg px-6" asChild>
+            <Button className="h-12 w-full rounded-lg px-6 sm:w-auto" asChild>
               <Link href="/login">
                 Get Started Free
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />

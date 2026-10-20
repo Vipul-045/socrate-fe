@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Space_Grotesk, Crimson_Text } from "next/font/google";
 import DodoProvider from "../components/provider/dodo-provider";
 import { UserProvider } from "@/components/provider/authoprovider";
+import { MotionProvider } from "@/components/motion/motion-provider";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -58,6 +59,15 @@ export const metadata: Metadata = {
   },
 };
 
+// `cover` lets the paper background run under the notch and home indicator;
+// Container and the mobile menu pad themselves back out with safe-area insets.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f6f4f0",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -69,9 +79,19 @@ export default function RootLayout({
       className={`${spaceGrotesk.variable} ${crimsonText.variable}`}
     >
       <body>
+        {/* Scroll reveals render hidden until JavaScript plays them in; without
+            it, show everything where it belongs. */}
+        <noscript>
+          <style
+            dangerouslySetInnerHTML={{
+              __html:
+                "[data-reveal]{opacity:1!important;transform:none!important}[data-collapse]{height:auto!important;opacity:1!important}",
+            }}
+          />
+        </noscript>
         <UserProvider>
         <DodoProvider/>
-        {children}
+        <MotionProvider>{children}</MotionProvider>
         <Toaster />
         </UserProvider>
 

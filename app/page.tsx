@@ -8,14 +8,21 @@ import { LatestPosts } from "@/components/site/latest-posts";
 import { Faq } from "@/components/site/faq";
 import { CtaBand } from "@/components/site/cta-band";
 import { JsonLd } from "@/components/site/json-ld";
-import { DEFAULT_TITLE, homeJsonLd, pageMetadata } from "@/lib/seo";
+import { FAQS } from "@/lib/content";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  homeJsonLd,
+  pageMetadata,
+} from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: { absolute: `${DEFAULT_TITLE} — AI Tutor for Your PDFs` },
-  description:
-    "Upload any PDF and have an AI tutor explain, summarize, and quiz you instantly. Every answer cites the page it came from. Free to start, no card required.",
+  title: { absolute: DEFAULT_TITLE },
+  description: DEFAULT_DESCRIPTION,
   path: "/",
 });
+
+const FEATURED_FAQS = FAQS.filter((faq) => faq.featured);
 
 export default function HomePage() {
   return (
@@ -27,11 +34,11 @@ export default function HomePage() {
       <HowItWorks />
       <WhoItsFor />
       <LatestPosts />
-      <Faq />
+      <Faq items={FEATURED_FAQS} seeAll />
       <CtaBand
         variant="centered"
         lede="Upload a PDF and have your first explanation, quiz, and set of notes in minutes."
-        secondary={{ label: "See pricing", href: "/pricing" }}
+        secondary={{ label: "Compare plans and pricing", href: "/pricing" }}
         note="Free to start · Cancel anytime"
       />
     </SiteShell>

@@ -3,17 +3,19 @@ import {
   MonoLabel,
   Section,
 } from "@/components/site/primitives";
+import { Reveal } from "@/components/motion/reveal";
 import { SHOWCASE } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
 /**
  * Understand / Practice / Revise — one band each, copy beside a small
  * product mock. The middle band flips on desktop so the page zig-zags;
- * on mobile the copy always comes first.
+ * on mobile the copy always comes first. The copy arrives first and the
+ * mock follows a beat later.
  */
 
 const mockCard =
-  "min-w-0 rounded-xl border border-line-strong bg-card p-[clamp(1.375rem,2.8vw,2rem)]";
+  "min-w-0 rounded-xl border border-line-strong bg-card p-[clamp(1.125rem,2.8vw,2rem)]";
 const chip =
   "inline-flex h-[26px] items-center rounded-md border border-line-strong px-2.5 font-mono text-xs text-ink-soft";
 
@@ -32,7 +34,7 @@ function Band({
     <Section id={id} rule aria-labelledby={`${id}-title`} className="scroll-mt-20">
       <Container>
         <div className="grid items-center gap-[clamp(2.25rem,6vw,5.5rem)] lg:grid-cols-2">
-          <div className={cn("min-w-0 max-w-[460px]", flip && "lg:order-last")}>
+          <Reveal className={cn("min-w-0 max-w-[460px]", flip && "lg:order-last")}>
             <MonoLabel className="mb-[clamp(1.125rem,2.2vw,1.5rem)]">
               {copy.eyebrow}
             </MonoLabel>
@@ -42,8 +44,10 @@ function Band({
             <p className="mt-[clamp(1rem,2vw,1.25rem)] text-base leading-[1.7] text-pretty text-ink-soft">
               {copy.body}
             </p>
-          </div>
-          {children}
+          </Reveal>
+          <Reveal delay={0.1} className="min-w-0">
+            {children}
+          </Reveal>
         </div>
       </Container>
     </Section>

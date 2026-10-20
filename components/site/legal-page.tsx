@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react";
+
 import { SiteShell } from "@/components/site/site-shell";
 import { Container, MonoLabel, Section } from "@/components/site/primitives";
 
@@ -45,9 +47,40 @@ export function LegalPage({
           </p>
 
           <div className="mt-[clamp(2.5rem,5vw,3.75rem)] grid items-start gap-[clamp(2rem,5vw,4.5rem)] lg:grid-cols-[minmax(220px,1fr)_minmax(0,2fr)]">
+            {/* Phones and tablets: contents fold away behind one row so the
+                policy itself starts on the first screen. */}
+            <details className="group border-t border-line-strong lg:hidden">
+              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
+                <MonoLabel as="span">
+                  Contents · {sections.length} sections
+                </MonoLabel>
+                <ChevronDown
+                  aria-hidden
+                  className="h-4 w-4 text-ink-soft transition-transform duration-200 ease-calm group-open:rotate-180"
+                />
+              </summary>
+              <nav aria-label="Contents" className="pb-3">
+                <ul>
+                  {sections.map((section, i) => (
+                    <li key={section.title} className="border-t border-line">
+                      <a
+                        href={`#${slug(section.title)}`}
+                        className="flex min-h-11 items-center gap-4 text-small text-ink-soft transition-colors duration-200 hover:text-ink"
+                      >
+                        <MonoLabel as="span" className="w-5 flex-none">
+                          {String(i + 1).padStart(2, "0")}
+                        </MonoLabel>
+                        {section.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </details>
+
             <nav
               aria-label="Contents"
-              className="border-t border-line-strong pt-[18px] lg:sticky lg:top-[104px]"
+              className="hidden border-t border-line-strong pt-[18px] lg:sticky lg:top-[104px] lg:block"
             >
               <MonoLabel as="p">Contents</MonoLabel>
               <ul className="mt-3.5 flex flex-col gap-[9px]">

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-import { DEFAULT_DESCRIPTION, OG_IMAGE, SITE_NAME } from "@/lib/seo";
+import { OG_IMAGE, SITE_NAME } from "@/lib/seo";
 
 /**
  * Site-wide social share image, inherited by every route. Generated once at
@@ -49,7 +49,7 @@ export default function OpengraphImage() {
             Walk out knowing everything.
           </div>
           <div style={{ display: "flex", marginTop: 36, fontSize: 30, lineHeight: 1.4, color: "#6b665d", maxWidth: 900 }}>
-            {DEFAULT_DESCRIPTION}
+            The study platform for notes, quizzes &amp; revision.
           </div>
         </div>
 

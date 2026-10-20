@@ -8,6 +8,9 @@ const config: Config = {
     "./app/**/*.{ts,tsx}",
   ],
   prefix: "",
+  // Touch screens fire :hover on tap and then keep it, which leaves rows and
+  // links stuck in their hover colour. Only apply hover where it's real.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,
@@ -71,8 +74,11 @@ const config: Config = {
         },
       },
       fontSize: {
+        // 34px at 320, 37px at 375, 40px at 430, 74px from ~1000 up. The
+        // vh term only bites on short screens (phones in landscape), where
+        // a width-driven headline would fill the whole viewport.
         display: [
-          "clamp(2.375rem, 7.4vw, 4.625rem)",
+          "clamp(2rem, min(0.9rem + 6vw, 1rem + 9vh), 4.625rem)",
           { lineHeight: "1.03", letterSpacing: "-0.038em", fontWeight: "500" },
         ],
         // Interior page titles (Features, Pricing, Contact, legal pages).
@@ -112,7 +118,7 @@ const config: Config = {
         measure: "520px",
       },
       padding: {
-        section: "clamp(4rem, 8vw, 6.5rem)",
+        section: "clamp(3.5rem, 8vw, 6.5rem)",
       },
       transitionTimingFunction: {
         calm: "cubic-bezier(.2,.7,.3,1)",
@@ -140,13 +146,15 @@ const config: Config = {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-8px)" },
         },
+        // First-paint entrance for the hero and page headers. Stagger by
+        // setting `[--rise-delay:120ms]` on each piece.
         "rise-in": {
-          from: { opacity: "0", transform: "translateY(12px)" },
+          from: { opacity: "0", transform: "translateY(16px)" },
           to: { opacity: "1", transform: "none" },
         },
       },
       animation: {
-        "rise-in": "rise-in 0.7s cubic-bezier(.2,.7,.3,1) both",
+        "rise-in": "rise-in 0.6s cubic-bezier(.2,.7,.3,1) var(--rise-delay, 0ms) both",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.6s ease-out forwards",

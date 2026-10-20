@@ -6,6 +6,7 @@ import {
   MonoLabel,
   Section,
 } from "@/components/site/primitives";
+import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { JOURNEY, TOOLS } from "@/lib/content";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
  * The study journey as a timeline. Each step sits on a shared rule with a
  * node at its leading edge; with no column gap the rules join into one
  * line on desktop. The last step is filled in — that's where you end up.
+ * Steps arrive left to right, so the line reads as a sequence.
  */
 export function HowItWorks() {
   return (
@@ -23,7 +25,7 @@ export function HowItWorks() {
       className="scroll-mt-20 py-[clamp(4rem,8vw,7rem)]"
     >
       <Container>
-        <div className="mb-[clamp(2.75rem,5.5vw,4.5rem)] flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+        <Reveal className="mb-[clamp(2.75rem,5.5vw,4.5rem)] flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
           <div className="max-w-[620px]">
             <MonoLabel className="mb-[clamp(1rem,2vw,1.25rem)]">
               How Socrate works
@@ -39,13 +41,18 @@ export function HowItWorks() {
             Socrate turns your study material into everything you need to learn,
             practice and revise.
           </p>
-        </div>
+        </Reveal>
 
-        <ol className="grid gap-y-[clamp(2.25rem,4vw,3rem)] pl-1 sm:grid-cols-2 lg:grid-cols-4">
+        <RevealGroup
+          as="ol"
+          delay={0.1}
+          className="grid gap-y-[clamp(2.25rem,4vw,3rem)] pl-1 sm:grid-cols-2 lg:grid-cols-4"
+        >
           {JOURNEY.map((step, i) => {
             const last = i === JOURNEY.length - 1;
             return (
-              <li
+              <RevealItem
+                as="li"
                 key={step.title}
                 className={cn(
                   "relative min-w-0 border-t pr-[clamp(1.25rem,2.4vw,2rem)] pt-[clamp(1.75rem,3vw,2.25rem)]",
@@ -81,35 +88,38 @@ export function HowItWorks() {
                     </span>
                   ))}
                 </div>
-              </li>
+              </RevealItem>
             );
           })}
-        </ol>
+        </RevealGroup>
 
         <div className="mt-[clamp(3rem,6vw,4.5rem)] flex flex-col gap-4 border-t border-line pt-[clamp(1.25rem,2.4vw,1.625rem)] md:flex-row md:items-center md:justify-between md:gap-8">
-          <ul
-            aria-label="Included tools"
-            className="flex flex-wrap items-center gap-x-3.5 gap-y-2.5"
-          >
-            {TOOLS.map((tool, i) => (
-              <li
-                key={tool}
-                className="flex items-center gap-3.5 font-mono text-[13px] tracking-[0.02em] text-[#3f3b34]"
-              >
-                {i > 0 ? (
-                  <span aria-hidden className="text-[#c9c3b6]">
+          {/* Every item carries its dot on the left, and the list is pulled
+              left into a clipped box: whichever item starts a wrapped line
+              has its dot hidden in the gutter instead of leading the line. */}
+          <div className="min-w-0 overflow-hidden">
+            <ul
+              aria-label="Included tools"
+              className="-ml-9 flex flex-wrap items-center gap-y-2.5"
+            >
+              {TOOLS.map((tool) => (
+                <li
+                  key={tool}
+                  className="flex items-center font-mono text-[13px] tracking-[0.02em] text-[#3f3b34]"
+                >
+                  <span aria-hidden className="w-9 shrink-0 text-center text-[#c9c3b6]">
                     ·
                   </span>
-                ) : null}
-                {tool}
-              </li>
-            ))}
-          </ul>
+                  {tool}
+                </li>
+              ))}
+            </ul>
+          </div>
           <Link
             href="/features"
-            className="group inline-flex shrink-0 items-center gap-2 text-small font-medium text-[#3f3b34] transition-colors hover:text-ink"
+            className="group -my-3 inline-flex shrink-0 items-center gap-2 self-start py-3 text-small font-medium text-[#3f3b34] transition-colors hover:text-ink md:self-auto"
           >
-            See all features
+            Explore Socrate features
             <ArrowRight
               className="h-3.5 w-3.5 transition-transform duration-200 ease-calm group-hover:translate-x-1"
               aria-hidden

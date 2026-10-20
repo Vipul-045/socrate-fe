@@ -15,6 +15,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: absoluteUrl("/") },
     { url: absoluteUrl("/features") },
     { url: absoluteUrl("/pricing") },
+    { url: absoluteUrl("/faq") },
+    { url: absoluteUrl("/about") },
     {
       url: absoluteUrl("/blog"),
       ...(newestPost && { lastModified: newestPost.date }),

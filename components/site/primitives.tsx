@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ *
@@ -12,7 +13,7 @@ export function Container({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("mx-auto w-full max-w-shell px-5 sm:px-8", className)}
+      className={cn("gutter-x mx-auto w-full max-w-shell", className)}
       {...props}
     />
   );
@@ -128,7 +129,9 @@ export function SectionHeading({
 
 /* ------------------------------------------------------------------ *
  * PageHeader — the top of every interior page: eyebrow, h1, lede, and
- * an optional control parked bottom-right (the billing toggle).
+ * an optional control parked bottom-right (the billing toggle). It's
+ * always on the first screen, so it rises in with CSS on first paint
+ * like the hero rather than waiting on a scroll reveal.
  * ------------------------------------------------------------------ */
 export function PageHeader({
   eyebrow,
@@ -145,19 +148,23 @@ export function PageHeader({
 }) {
   return (
     <div className={cn("pb-[clamp(2.5rem,5vw,3.75rem)]", className)}>
-      <MonoLabel className="mb-[clamp(1.375rem,3vw,1.875rem)] tracking-[0.16em] text-ink-soft">
+      <MonoLabel className="mb-[clamp(1.375rem,3vw,1.875rem)] animate-rise-in tracking-[0.16em] text-ink-soft">
         {eyebrow}
       </MonoLabel>
       <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between md:gap-10">
         <div>
-          <h1 className="max-w-[760px] text-page text-balance">{title}</h1>
+          <h1 className="max-w-[760px] animate-rise-in text-page text-balance [--rise-delay:60ms]">
+            {title}
+          </h1>
           {lede ? (
-            <p className="mt-[clamp(1.25rem,2.6vw,1.75rem)] max-w-[520px] text-lede text-pretty text-ink-soft">
+            <p className="mt-[clamp(1.25rem,2.6vw,1.75rem)] max-w-[520px] animate-rise-in text-lede text-pretty text-ink-soft [--rise-delay:120ms]">
               {lede}
             </p>
           ) : null}
         </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
+        {action ? (
+          <div className="shrink-0 animate-rise-in [--rise-delay:180ms]">{action}</div>
+        ) : null}
       </div>
     </div>
   );
@@ -168,4 +175,22 @@ export function PageHeader({
  * ------------------------------------------------------------------ */
 export function Rule({ className }: { className?: string }) {
   return <hr className={cn("border-0 border-t border-line", className)} />;
+}
+
+/* ------------------------------------------------------------------ *
+ * TextLink — an underlined link inside running copy.
+ * ------------------------------------------------------------------ */
+export function TextLink({
+  className,
+  ...props
+}: React.ComponentProps<typeof Link>) {
+  return (
+    <Link
+      className={cn(
+        "text-[#3f3b34] underline decoration-[#c9c3b6] underline-offset-[3px] transition-colors hover:text-ink",
+        className,
+      )}
+      {...props}
+    />
+  );
 }

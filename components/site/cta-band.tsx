@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Container, Section } from "@/components/site/primitives";
+import { Reveal } from "@/components/motion/reveal";
 
 type Action = { label: string; href: string };
 
@@ -48,7 +49,7 @@ export function CtaBand({
         className="py-[clamp(5rem,10vw,8.5rem)]"
       >
         <Container>
-          <div className="mx-auto max-w-[720px] text-center">
+          <Reveal className="mx-auto max-w-[720px] text-center">
             <h2
               id="cta-title"
               className="text-[clamp(1.875rem,4.6vw,3.25rem)] font-medium leading-[1.06] tracking-[-0.035em] text-balance"
@@ -76,7 +77,7 @@ export function CtaBand({
             <p className="mt-[clamp(1.125rem,2.2vw,1.375rem)] text-xs tracking-[0.01em] text-ink-soft">
               {note}
             </p>
-          </div>
+          </Reveal>
         </Container>
       </Section>
     );
@@ -85,13 +86,13 @@ export function CtaBand({
   return (
     <Section tone="surface" rule className="py-[clamp(4.5rem,9vw,7.5rem)]">
       <Container>
-        <div className="flex flex-col gap-[clamp(1.5rem,4vw,3rem)] lg:flex-row lg:items-center lg:justify-between">
+        <Reveal className="flex flex-col gap-[clamp(1.5rem,4vw,3rem)] lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="max-w-measure text-h1 text-balance">{title}</h2>
             <p className="mt-3.5 text-body text-ink-soft">{note}</p>
           </div>
           <div className="sm:self-start lg:self-auto">{primaryButton}</div>
-        </div>
+        </Reveal>
       </Container>
     </Section>
   );

@@ -1,6 +1,6 @@
 import { SiteShell } from "@/components/site/site-shell";
 import { Pricing } from "@/components/landing/pricing/Pricing";
-import { Faq } from "@/components/site/faq";
+import { FaqPointer } from "@/components/site/faq";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
@@ -14,7 +14,7 @@ export default function PricingPage() {
   return (
     <SiteShell>
       <Pricing />
-      <Faq />
+      <FaqPointer text="Questions about plans, uploads, cancelling or student discounts?" />
     </SiteShell>
   );
 }

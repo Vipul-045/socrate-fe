@@ -195,7 +195,7 @@ function CheckoutPageInner() {
 
   if (!userInfo) {
     return (
-      <div className="max-w-lg mx-auto px-6 py-24 text-center">
+      <div className="gutter-x max-w-lg mx-auto py-24 text-center">
         <p className="text-muted-foreground mb-6">You need to be signed in to check out.</p>
         <Button onClick={() => router.push(`/login?next=${encodeURIComponent(`/checkout?planId=${planId ?? ""}`)}`)}>
           Sign in
@@ -205,10 +205,10 @@ function CheckoutPageInner() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-16">
+    <div className="gutter-x max-w-xl mx-auto py-[clamp(2.5rem,8vw,4rem)]">
       <Link
-        href="/#pricing"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-8"
+        href="/pricing"
+        className="-mt-3 mb-5 inline-flex items-center gap-1.5 py-3 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> Back to plans
       </Link>
@@ -225,8 +225,8 @@ function CheckoutPageInner() {
       )}
 
       {!loading && summary && (
-        <div className="rounded-xl border border-border bg-background p-6">
-          <div className="flex items-center justify-between mb-1">
+        <div className="rounded-xl border border-border bg-background p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
             <h2 className="font-semibold text-lg">{summary.plan.name}</h2>
             {cycleOptions.length > 0 && (
               <div className="inline-flex rounded-lg border border-border p-0.5 text-xs">
@@ -237,7 +237,7 @@ function CheckoutPageInner() {
                     <button
                       key={p._id}
                       onClick={() => router.push(`/checkout?planId=${p._id}`)}
-                      className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
+                      className={`min-h-9 px-3 rounded-md capitalize transition-colors ${
                         active
                           ? "bg-foreground text-background"
                           : "text-muted-foreground hover:text-foreground"
@@ -255,17 +255,17 @@ function CheckoutPageInner() {
           )}
 
           <dl className="space-y-2.5 text-sm mb-4">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Plan price</dt>
               <dd>{formatAmount(summary.breakdown.baseAmount, summary.breakdown.currency)}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">
                 Convenience fee ({summary.breakdown.convenienceFeePercent}%)
               </dt>
               <dd>{formatAmount(summary.breakdown.convenienceFee, summary.breakdown.currency)}</dd>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">GST ({summary.breakdown.gstPercent}%)</dt>
               <dd>{formatAmount(summary.breakdown.gstAmount, summary.breakdown.currency)}</dd>
             </div>
@@ -280,7 +280,7 @@ function CheckoutPageInner() {
 
           {error && <p className="text-destructive text-sm mb-4">{error}</p>}
 
-          <Button onClick={handlePay} disabled={isPaying} className="w-full mb-4">
+          <Button onClick={handlePay} disabled={isPaying} className="h-12 w-full mb-4">
             {isPaying
               ? "Processing…"
               : `Pay ${formatAmount(summary.breakdown.totalAmount, summary.breakdown.currency)}`}
@@ -297,7 +297,7 @@ function CheckoutPageInner() {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={<div className="max-w-xl mx-auto px-6 py-16">Loading…</div>}>
+    <Suspense fallback={<div className="gutter-x max-w-xl mx-auto py-16">Loading…</div>}>
       <CheckoutPageInner />
     </Suspense>
   );

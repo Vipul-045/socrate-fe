@@ -18,12 +18,23 @@ export const SITE_NAME = "Socrate";
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://www.socrate.in";
 
-export const DEFAULT_TITLE = "Socrate Study Platform";
+/** The homepage title, and the fallback for any route that doesn't set one. */
+export const DEFAULT_TITLE =
+  "Socrate — The Study Platform for Notes, Quizzes & Revision";
 
+/** The homepage meta description: the entity description, condensed for snippets. */
 export const DEFAULT_DESCRIPTION =
-  "Upload any PDF and have an AI tutor explain, summarize, and quiz you instantly.";
+  "Upload your notes and PDFs, then understand them, quiz yourself and revise — all in one study platform. AI explanations that cite the source page. Free to start, no card needed.";
 
-export const LOCALE = "en_US";
+/**
+ * What Socrate is, in one sentence. Used word for word on the homepage, /about,
+ * structured data and llms.txt — and should match the Product Hunt and LinkedIn
+ * listings — so search engines and AI systems see one consistent description.
+ */
+export const ENTITY_DESCRIPTION =
+  "Socrate is a study platform where students upload their notes and PDFs, get explanations that cite the source page, generate quizzes and flashcards, and revise from notes they can export.";
+
+export const LOCALE = "en";
 
 export const TITLE_TEMPLATE = `%s — ${SITE_NAME}`;
 
@@ -32,7 +43,7 @@ export const OG_IMAGE = {
   url: "/opengraph-image",
   width: 1200,
   height: 630,
-  alt: `${SITE_NAME} — ${DEFAULT_DESCRIPTION}`,
+  alt: `${SITE_NAME}: Drop your notes. Walk out knowing everything. The study platform for notes, quizzes and revision.`,
 };
 
 /**
@@ -119,6 +130,7 @@ function organization() {
     "@id": ORGANIZATION_ID,
     name: SITE_NAME,
     url: SITE_URL,
+    description: ENTITY_DESCRIPTION,
     logo: absoluteUrl("/icon.png"),
     ...(SUPPORT && {
       email: SUPPORT.value,
@@ -132,7 +144,23 @@ function organization() {
   };
 }
 
-/** Home page: who we are, the site, the product, and the FAQ shown on the page. */
+function breadcrumbs(...trail: { name: string; path: string }[]) {
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement: [{ name: "Home", path: "/" }, ...trail].map((crumb, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: crumb.name,
+      item: absoluteUrl(crumb.path),
+    })),
+  };
+}
+
+/**
+ * Home page: who we are, the site, and the product. The FAQPage lives on /faq
+ * alone — the homepage shows a few of the same questions, and marking them up
+ * twice would hand search engines two competing copies.
+ */
 export function homeJsonLd() {
   return {
     "@context": "https://schema.org",
@@ -143,6 +171,7 @@ export function homeJsonLd() {
         "@id": WEBSITE_ID,
         name: SITE_NAME,
         url: SITE_URL,
+        description: ENTITY_DESCRIPTION,
         inLanguage: "en",
         publisher: { "@id": ORGANIZATION_ID },
       },
@@ -150,7 +179,8 @@ export function homeJsonLd() {
         "@type": "WebApplication",
         name: SITE_NAME,
         url: SITE_URL,
-        description: DEFAULT_DESCRIPTION,
+        description: ENTITY_DESCRIPTION,
+        inLanguage: "en",
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
         publisher: { "@id": ORGANIZATION_ID },
@@ -161,15 +191,45 @@ export function homeJsonLd() {
           priceCurrency: "INR",
         },
       },
+    ],
+  };
+}
+
+export function faqJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
       {
         "@type": "FAQPage",
-        url: SITE_URL,
+        url: absoluteUrl("/faq"),
+        inLanguage: "en",
+        isPartOf: { "@id": WEBSITE_ID },
         mainEntity: FAQS.map((faq) => ({
           "@type": "Question",
           name: faq.q,
           acceptedAnswer: { "@type": "Answer", text: faq.a },
         })),
       },
+      breadcrumbs({ name: "FAQ", path: "/faq" }),
+    ],
+  };
+}
+
+export function aboutJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      organization(),
+      {
+        "@type": "AboutPage",
+        url: absoluteUrl("/about"),
+        name: `About ${SITE_NAME}`,
+        description: ENTITY_DESCRIPTION,
+        inLanguage: "en",
+        isPartOf: { "@id": WEBSITE_ID },
+        about: { "@id": ORGANIZATION_ID },
+      },
+      breadcrumbs({ name: "About", path: "/about" }),
     ],
   };
 }
@@ -200,14 +260,10 @@ export function blogPostJsonLd(post: Post) {
         author: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
         publisher,
       },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-          { "@type": "ListItem", position: 2, name: "Blog", item: absoluteUrl("/blog") },
-          { "@type": "ListItem", position: 3, name: post.title, item: url },
-        ],
-      },
+      breadcrumbs(
+        { name: "Blog", path: "/blog" },
+        { name: post.title, path: `/blog/${post.slug}` },
+      ),
     ],
   };
 }

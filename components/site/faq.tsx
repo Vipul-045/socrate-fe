@@ -1,68 +1,92 @@
-"use client";
-
-import * as Accordion from "@radix-ui/react-accordion";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { Container, Section } from "@/components/site/primitives";
-import { FAQS } from "@/lib/content";
+import { FaqList } from "@/components/site/faq-list";
+import { Reveal } from "@/components/motion/reveal";
+import { FAQS, type FaqItem } from "@/lib/content";
+import { cn } from "@/lib/utils";
 
-/** The + collapses to a − on open; nothing else moves. */
-function Indicator() {
-  return (
-    <span
-      aria-hidden
-      className="relative ml-4 mt-1.5 h-3 w-3 shrink-0 text-ink-soft transition-colors group-hover:text-ink sm:ml-6"
-    >
-      <span className="absolute left-0 top-1/2 h-px w-3 -translate-y-1/2 bg-current" />
-      <span className="absolute left-1/2 top-0 h-3 w-px -translate-x-1/2 bg-current transition-transform duration-200 ease-calm group-data-[state=open]:scale-y-0" />
-    </span>
-  );
-}
+export { FaqList };
 
 export function Faq({
+  items = FAQS,
   title = "Frequently asked questions",
   description = "Everything you need to know about Socrate.",
   rule = true,
+  seeAll = false,
 }: {
+  items?: readonly FaqItem[];
   title?: string;
   description?: string;
   rule?: boolean;
+  /** Link to the full list on /faq — for sections that show only a few. */
+  seeAll?: boolean;
 }) {
   return (
-    <Section id="faqs" rule={rule} className="scroll-mt-20">
+    <Section id="faqs" rule={rule} aria-labelledby="faqs-title" className="scroll-mt-20">
       <Container>
         <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+          {/* The reveal sits inside the sticky column, never on it: a
+              transform on a sticky element would fight the pinning. */}
           <div className="lg:sticky lg:top-[104px] lg:col-span-6 lg:self-start">
-            <h2 className="text-h2 text-balance">{title}</h2>
-            <p className="mt-5 max-w-[26ch] text-lede text-ink-soft">
-              {description}
-            </p>
+            <Reveal>
+              <h2 id="faqs-title" className="text-h2 text-balance">
+                {title}
+              </h2>
+              <p className="mt-5 max-w-[26ch] text-lede text-ink-soft">
+                {description}
+              </p>
+            </Reveal>
           </div>
 
-          <Accordion.Root
-            type="single"
-            collapsible
-            className="lg:col-span-6 lg:col-start-7"
-          >
-            {FAQS.map((faq, i) => (
-              <Accordion.Item
-                key={faq.q}
-                value={`faq-${i}`}
-                className="border-t border-line last:border-b"
+          <Reveal delay={0.1} className="lg:col-span-6 lg:col-start-7">
+            <FaqList items={items} />
+            {seeAll ? (
+              <Link
+                href="/faq"
+                className="group mt-6 inline-flex items-center gap-2 py-3 text-small font-medium text-[#3f3b34] transition-colors hover:text-ink"
               >
-                <Accordion.Header>
-                  <Accordion.Trigger className="group flex w-full cursor-pointer items-start justify-between py-5 text-left text-[1.0625rem] font-medium leading-snug tracking-[-0.01em] text-ink">
-                    <span>{faq.q}</span>
-                    <Indicator />
-                  </Accordion.Trigger>
-                </Accordion.Header>
-                <Accordion.Content className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                  <p className="max-w-[52ch] pb-6 pr-8 text-small text-ink-soft">
-                    {faq.a}
-                  </p>
-                </Accordion.Content>
-              </Accordion.Item>
-            ))}
-          </Accordion.Root>
+                See all questions
+                <ArrowRight
+                  className="h-3.5 w-3.5 transition-transform duration-200 ease-calm group-hover:translate-x-1"
+                  aria-hidden
+                />
+              </Link>
+            ) : null}
+          </Reveal>
+        </div>
+      </Container>
+    </Section>
+  );
+}
+
+/**
+ * A one-line pointer to /faq for pages that used to repeat the whole list
+ * (features, pricing). Keeps the answers in one place.
+ */
+export function FaqPointer({
+  text = "Questions about uploads, privacy or billing?",
+  className,
+}: {
+  text?: string;
+  className?: string;
+}) {
+  return (
+    <Section rule className={cn("py-[clamp(2.5rem,5vw,3.5rem)]", className)}>
+      <Container>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-8">
+          <p className="text-lede text-pretty text-ink-soft">{text}</p>
+          <Link
+            href="/faq"
+            className="group -my-3 inline-flex shrink-0 items-center gap-2 self-start py-3 text-small font-medium text-[#3f3b34] transition-colors hover:text-ink md:self-auto"
+          >
+            Read the Socrate FAQ
+            <ArrowRight
+              className="h-3.5 w-3.5 transition-transform duration-200 ease-calm group-hover:translate-x-1"
+              aria-hidden
+            />
+          </Link>
         </div>
       </Container>
     </Section>

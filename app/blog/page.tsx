@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -29,19 +30,26 @@ export default function BlogPage() {
             lede="Occasional essays on study methods, memory, and building an AI tutor that actually teaches."
           />
 
+          {/* First screen, so the list carries on the header's entrance. */}
           <ul className="border-t border-line-strong">
-            {POSTS.map((post) => (
-              <li key={post.slug} className="border-b border-line-strong">
+            {POSTS.map((post, i) => (
+              <li
+                key={post.slug}
+                style={{ "--rise-delay": `${200 + Math.min(i, 4) * 60}ms` } as CSSProperties}
+                className="animate-rise-in border-b border-line-strong"
+              >
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="group flex flex-wrap items-start gap-[clamp(1rem,4vw,4rem)] py-[clamp(1.75rem,3.6vw,2.75rem)] transition-colors duration-200 hover:bg-surface"
+                  className="group flex flex-col items-start gap-[clamp(0.875rem,4vw,4rem)] py-[clamp(1.75rem,3.6vw,2.75rem)] transition-colors duration-200 hover:bg-surface sm:flex-row"
                 >
-                  <div className="flex w-[150px] flex-none flex-col gap-2">
+                  {/* One meta line on phones, a stacked date column beside the
+                      essay from sm up. */}
+                  <div className="flex flex-none flex-wrap gap-x-4 gap-y-2 sm:w-[150px] sm:flex-col">
                     <MonoLabel as="span">{formatPostDate(post.date)}</MonoLabel>
                     <MonoLabel as="span">{post.readingMinutes} min read</MonoLabel>
                   </div>
 
-                  <article className="min-w-0 max-w-[620px] flex-[1_1_340px]">
+                  <article className="min-w-0 max-w-[620px] flex-1">
                     <h2 className="text-h3 text-balance">{post.title}</h2>
                     <p className="mt-3 text-body leading-[1.7] text-pretty text-ink-soft">
                       {post.excerpt}

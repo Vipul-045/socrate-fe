@@ -55,8 +55,17 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-paper text-foreground antialiased;
+    /* Long words (emails, URLs) wrap instead of widening the page, and
+       nothing can open a sideways scroll on phones. `clip` rather than
+       `hidden` so the sticky header keeps working. */
+    overflow-wrap: break-word;
+    overflow-x: clip;
   }
   h1,
   h2,
@@ -71,6 +80,19 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Horizontal page gutter. Never narrower than the device's safe area,
+     so content clears the notch in landscape. */
+  .gutter-x {
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
+  }
+  @media (min-width: 640px) {
+    .gutter-x {
+      padding-left: max(2rem, env(safe-area-inset-left));
+      padding-right: max(2rem, env(safe-area-inset-right));
+    }
   }
 
   /* Diagonal hatch for placeholder wells (the demo video). */
@@ -90,6 +112,22 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  /* Entrances are decoration: show the content where it ends up. */
+  .animate-rise-in {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 ::-webkit-scrollbar {

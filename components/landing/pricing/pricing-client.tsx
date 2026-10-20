@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Container, MonoLabel, PageHeader, Section } from "@/components/site/primitives";
+import { RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { GetMemberPlans, grantFreePlan, MemberPlan } from "@/lib/services";
 import { useUser } from "@/components/provider/authoprovider";
 import type { DisplayPrice } from "@/lib/pricing";
@@ -40,29 +41,47 @@ function FeatureList({ items, strong }: { items: string[]; strong?: boolean }) {
   );
 }
 
+/**
+ * One plan. Stacked on phones; on tablets the plan splits into two columns
+ * (name and price | button and features) so the button isn't stretched
+ * across the whole page; side by side with the other plans from lg.
+ * Columns arrive one after another once the plans have loaded.
+ */
 function Column({
   highlighted,
   badge,
-  children,
+  summary,
+  actions,
 }: {
   highlighted?: boolean;
   badge?: string;
-  children: React.ReactNode;
+  summary: React.ReactNode;
+  actions: React.ReactNode;
 }) {
   return (
-    <div
+    <RevealItem
       className={cn(
-        "flex flex-col border-b border-line-strong px-0 py-[clamp(1.875rem,3.5vw,2.625rem)] lg:border-b-0 lg:px-[clamp(1.5rem,2.6vw,2.25rem)]",
-        highlighted && "border-x bg-card px-6 sm:px-8",
+        "flex flex-col border-b border-line-strong px-0 py-[clamp(1.875rem,3.5vw,2.625rem)] md:grid md:grid-cols-2 md:gap-x-10 lg:flex lg:border-b-0 lg:px-[clamp(1.5rem,2.6vw,2.25rem)]",
+        // The last plan hands its bottom rule to the note underneath, so
+        // stacked layouts don't end on a double line.
+        highlighted ? "border-x bg-card px-6 sm:px-8" : "last:border-b-0",
       )}
     >
-      {/* The badge row is always reserved so names, prices and buttons
-          share a baseline across the row. */}
-      <MonoLabel className={cn("h-[22px]", highlighted && "text-ink")}>
-        {badge ?? " "}
+      {/* Side by side, the badge row is always reserved so names, prices
+          and buttons share a baseline across the row. Stacked, an empty
+          one would only be a gap. */}
+      <MonoLabel
+        className={cn(
+          "mb-3.5 h-[22px] md:col-span-2",
+          highlighted && "text-ink",
+          !badge && "hidden lg:block",
+        )}
+      >
+        {badge ?? "\u00A0"}
       </MonoLabel>
-      {children}
-    </div>
+      <div className="min-w-0">{summary}</div>
+      <div className="mt-[26px] min-w-0 md:mt-0 lg:mt-[26px]">{actions}</div>
+    </RevealItem>
   );
 }
 
@@ -152,7 +171,7 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
         )}
 
         {!loading && plans.length > 0 && (
-          <div className="grid border-t border-line-strong lg:grid-cols-3">
+          <RevealGroup className="grid border-t border-line-strong lg:grid-cols-3">
             {plans.map((plan) => {
               const highlighted = plan.name === "Pro";
               const isFree = plan.price === 0;
@@ -169,115 +188,144 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
                   key={plan._id}
                   highlighted={highlighted}
                   badge={highlighted ? "Most popular" : undefined}
-                >
-                  <h2 className="mb-1.5 mt-3.5 text-title">{plan.name}</h2>
-                  <p className="text-small text-ink-soft">{plan.description}</p>
+                  summary={
+                    <>
+                      <h2 className="mb-1.5 text-title">{plan.name}</h2>
+                      <p className="text-small text-ink-soft">
+                        {plan.description}
+                      </p>
 
-                  <div className="mt-[26px] flex flex-wrap items-baseline gap-x-2.5">
-                    {promo?.originalPrice ? (
-                      <span className="text-lg text-[#a39d91] line-through">
-                        {promo.originalPrice}
-                      </span>
-                    ) : null}
-                    <span className="text-price">{price}</span>
-                    <span className="text-small text-ink-soft">
-                      {isFree ? "/forever" : "/month"}
-                    </span>
-                  </div>
-                  {promo?.discountBadge ? (
-                    <MonoLabel className="mt-2 text-xs tracking-[0.06em] text-[#7a6a2e]">
-                      {promo.discountBadge}
-                    </MonoLabel>
-                  ) : null}
+                      <div className="mt-[26px] flex flex-wrap items-baseline gap-x-2.5">
+                        {promo?.originalPrice ? (
+                          <span className="text-lg text-[#a39d91] line-through">
+                            {promo.originalPrice}
+                          </span>
+                        ) : null}
+                        <span className="text-price">{price}</span>
+                        <span className="text-small text-ink-soft">
+                          {isFree ? "/forever" : "/month"}
+                        </span>
+                      </div>
+                      {promo?.discountBadge ? (
+                        <MonoLabel className="mt-2 text-xs tracking-[0.06em] text-[#7a6a2e]">
+                          {promo.discountBadge}
+                        </MonoLabel>
+                      ) : null}
+                    </>
+                  }
+                  actions={
+                    <>
+                      {isCurrent ? (
+                        <Button
+                          variant={highlighted ? "default" : "outline"}
+                          className={planButton}
+                          disabled
+                        >
+                          {isFree
+                            ? "Your current plan"
+                            : `You're a ${plan.name} member`}
+                        </Button>
+                      ) : isFree ? (
+                        // A paid member can't drop to Free from here — the
+                        // backend refuses it until the paid plan is cancelled.
+                        <Button
+                          variant="outline"
+                          className={planButton}
+                          onClick={() => handleFreePlan(plan)}
+                          disabled={userLoading || isClaiming || hasPaidPlan}
+                        >
+                          {hasPaidPlan
+                            ? `Included in ${currentPlan?.name}`
+                            : isClaiming
+                              ? "Activating…"
+                              : "Get Started"}
+                        </Button>
+                      ) : !highlighted ? (
+                        <Button
+                          variant="outline"
+                          className={planButton}
+                          asChild
+                        >
+                          <Link href="/login">Choose Plan</Link>
+                        </Button>
+                      ) : userInfo ? (
+                        <Button
+                          className={planButton}
+                          onClick={() =>
+                            router.push(`/checkout?planId=${plan._id}`)
+                          }
+                        >
+                          Start your 7 day free trial
+                        </Button>
+                      ) : (
+                        <Button
+                          className={planButton}
+                          onClick={redirectToLogin}
+                          disabled={userLoading}
+                        >
+                          Start your 7 day free trial
+                        </Button>
+                      )}
 
-                  <div className="mt-[26px]">
-                    {isCurrent ? (
-                      <Button
-                        variant={highlighted ? "default" : "outline"}
-                        className={planButton}
-                        disabled
-                      >
-                        {isFree ? "Your current plan" : `You're a ${plan.name} member`}
-                      </Button>
-                    ) : isFree ? (
-                      // A paid member can't drop to Free from here — the
-                      // backend refuses it until the paid plan is cancelled.
-                      <Button
-                        variant="outline"
-                        className={planButton}
-                        onClick={() => handleFreePlan(plan)}
-                        disabled={userLoading || isClaiming || hasPaidPlan}
-                      >
-                        {hasPaidPlan
-                          ? `Included in ${currentPlan?.name}`
-                          : isClaiming
-                            ? "Activating…"
-                            : "Get Started"}
-                      </Button>
-                    ) : !highlighted ? (
-                      <Button variant="outline" className={planButton} asChild>
-                        <Link href="/login">Choose Plan</Link>
-                      </Button>
-                    ) : userInfo ? (
-                      <Button
-                        className={planButton}
-                        onClick={() => router.push(`/checkout?planId=${plan._id}`)}
-                      >
-                        Start your 7 day free trial
-                      </Button>
-                    ) : (
-                      <Button
-                        className={planButton}
-                        onClick={redirectToLogin}
-                        disabled={userLoading}
-                      >
-                        Start your 7 day free trial
-                      </Button>
-                    )}
-                  </div>
-
-                  <FeatureList
-                    strong={highlighted}
-                    items={plan.planFeatures
-                      .filter((f) => f.enabled)
-                      .map((f) => `${f.limit} ${f.featureKey.replace(/_/g, " ")}/month`)}
-                  />
-                </Column>
+                      <FeatureList
+                        strong={highlighted}
+                        items={plan.planFeatures
+                          .filter((f) => f.enabled)
+                          .map(
+                            (f) =>
+                              `${f.limit} ${f.featureKey.replace(/_/g, " ")}/month`,
+                          )}
+                      />
+                    </>
+                  }
+                />
               );
             })}
 
             {/* Max isn't sold yet; show it as announced until the backend
                 returns a real plan for it. */}
             {!hasMaxPlan && (
-              <Column badge="Coming soon">
-                <h2 className="mb-1.5 mt-3.5 text-title">Max</h2>
-                <p className="text-small text-ink-soft">For practical studies</p>
-                <div className="mt-[26px] flex min-h-[clamp(2.375rem,4.4vw,3.25rem)] items-baseline">
-                  <MonoLabel className="text-[13px] tracking-[0.08em]">
-                    Pricing to be announced
-                  </MonoLabel>
-                </div>
-                <div className="mt-[26px]">
-                  <Button
-                    variant="outline"
-                    className={cn(planButton, "border-[#eae6de] text-ink-muted")}
-                    disabled
-                  >
-                    Coming soon
-                  </Button>
-                </div>
-                <FeatureList
-                  items={[
-                    "Everything in Pro",
-                    "Collaborate with friends",
-                    "Extended premium chats",
-                    "AI video generations",
-                    "Priority support",
-                  ]}
-                />
-              </Column>
+              <Column
+                badge="Coming soon"
+                summary={
+                  <>
+                    <h2 className="mb-1.5 text-title">Max</h2>
+                    <p className="text-small text-ink-soft">
+                      For practical studies
+                    </p>
+                    <div className="mt-[26px] flex min-h-[clamp(2.375rem,4.4vw,3.25rem)] items-baseline">
+                      <MonoLabel className="text-[13px] tracking-[0.08em]">
+                        Pricing to be announced
+                      </MonoLabel>
+                    </div>
+                  </>
+                }
+                actions={
+                  <>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        planButton,
+                        "border-[#eae6de] text-ink-muted",
+                      )}
+                      disabled
+                    >
+                      Coming soon
+                    </Button>
+                    <FeatureList
+                      items={[
+                        "Everything in Pro",
+                        "Collaborate with friends",
+                        "Extended premium chats",
+                        "AI video generations",
+                        "Priority support",
+                      ]}
+                    />
+                  </>
+                }
+              />
             )}
-          </div>
+          </RevealGroup>
         )}
 
         <p className="mt-[clamp(1.75rem,3vw,2.25rem)] border-t border-[#eae6de] pt-5 text-xs leading-relaxed text-ink-muted">
