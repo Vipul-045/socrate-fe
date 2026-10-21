@@ -1,131 +1,348 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { MonoLabel } from "@/components/site/primitives";
-import { FREE_TIER_NOTE, STATS } from "@/lib/content";
+import { Button } from "@/components/ui/button";
+import { PasswordInput, TextInput } from "@/components/site/field";
+import {
+  AuthField,
+  AuthFooter,
+  AuthHeading,
+  AuthNotice,
+  AuthShell,
+  AuthSwitch,
+  GoogleButton,
+  OrDivider,
+  authButtonClass,
+  authControlClass,
+  footerLink,
+  inkLink,
+  quietLink,
+} from "@/components/site/auth-shell";
+import { useUser } from "@/components/provider/authoprovider";
+import { FREE_TIER_NOTE } from "@/lib/content";
+import {
+  PASSWORD_RULE,
+  authErrorMessage,
+  googleSignInUrl,
+  passwordHint,
+  registerWithPassword,
+  requestPasswordReset,
+  resendVerificationEmail,
+  signInWithPassword,
+} from "@/lib/auth-api";
 
-const underlined =
-  "text-[#3f3b34] underline decoration-[#c9c3b6] underline-offset-[3px] transition-colors hover:text-ink";
+/* Signing in here signs you in on app.socrate.in too: one account and one
+   session, kept by the backend for both sites. Without a `next` page, a
+   signed-in reader goes on to the app, as Google sign-in always has. */
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
 
-function GoogleMark() {
+type Mode = "signin" | "signup" | "forgot";
+
+const COPY: Record<Mode, { title: string; body: string }> = {
+  signin: { title: "Welcome back", body: "Sign in to continue learning where you left off." },
+  signup: { title: "Create your account", body: "Start your study journey with Socrate in seconds." },
+  forgot: {
+    title: "Reset your password",
+    body: "Enter your account's email and we'll send you a link to choose a new password.",
+  },
+};
+
+/** A page on this site to go on to, or null — never another site. */
+function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
+  return raw;
+}
+
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
+  const { userInfo, isLoading, refresh } = useUser();
+
+  const initialMode = searchParams.get("mode");
+  const [mode, setMode] = useState<Mode>(
+    initialMode === "signup" || initialMode === "forgot" ? initialMode : "signin",
+  );
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error") === "auth_failed"
+      ? "Google couldn't sign you in. Please try again, or use your email and password."
+      : null,
+  );
+  const [resetSent, setResetSent] = useState<string | null>(null);
+  /* After registering, the reader is told about the verification email
+     before going on — so this page doesn't move on by itself then. */
+  const [signedUp, setSignedUp] = useState<{ email: string; emailSent: boolean } | null>(null);
+  const [resendState, setResendState] = useState<"idle" | "sending" | string>("idle");
+
+  const leaving = useRef(false);
+  const goOn = useCallback(() => {
+    if (leaving.current) return;
+    leaving.current = true;
+    if (next) router.replace(next);
+    else window.location.assign(APP_URL);
+  }, [next, router]);
+
+  /* Already signed in — here, on app.socrate.in, or by Google bringing the
+     reader back to this page — so there is nothing to do here. */
+  useEffect(() => {
+    if (!isLoading && userInfo && !signedUp && !submitting) goOn();
+  }, [isLoading, userInfo, signedUp, submitting, goOn]);
+
+  const switchTo = (nextMode: Mode) => {
+    setMode(nextMode);
+    setError(null);
+    setResetSent(null);
+    setPassword("");
+    setConfirmPassword("");
+  };
+
+  const startGoogle = () => {
+    // Google brings the reader back here; the effect above takes them on.
+    const back = `${window.location.origin}/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+    window.location.assign(googleSignInUrl(back));
+  };
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting) return;
+    setError(null);
+
+    if (mode === "signup") {
+      const hint = passwordHint(password);
+      if (hint) return setError(hint);
+      if (password !== confirmPassword) return setError("The passwords don't match.");
+    }
+
+    setSubmitting(true);
+    try {
+      if (mode === "signin") {
+        await signInWithPassword(email.trim(), password);
+        // A `next` page here is reached without a reload: it must see the session.
+        await refresh();
+        goOn();
+        return;
+      }
+      if (mode === "signup") {
+        const res = await registerWithPassword({ name: name.trim(), email: email.trim(), password, confirmPassword });
+        setSignedUp({ email: email.trim(), emailSent: res.verificationEmailSent });
+        await refresh();
+        return;
+      }
+      setResetSent((await requestPasswordReset(email.trim())).message);
+    } catch (err) {
+      setError(authErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function resend() {
+    setResendState("sending");
+    try {
+      setResendState((await resendVerificationEmail()).message);
+    } catch (err) {
+      setResendState(authErrorMessage(err));
+    }
+  }
+
+  if (signedUp) {
+    return (
+      <>
+        <AuthHeading title="You're in">Your account is ready on socrate.in and in the Socrate app.</AuthHeading>
+        <AuthNotice tone="success">
+          {signedUp.emailSent
+            ? `We've sent a link to ${signedUp.email} to verify your email. You can start studying now and verify when you're ready.`
+            : "We couldn't send the verification email just now. You can start studying now and ask for another below."}
+        </AuthNotice>
+        <Button type="button" size="lg" className={authButtonClass} onClick={goOn}>
+          Continue
+        </Button>
+        <AuthSwitch>
+          {resendState === "idle" ? (
+            <>
+              Didn&apos;t get it?{" "}
+              <button type="button" onClick={resend} className={inkLink}>
+                Send it again
+              </button>
+            </>
+          ) : resendState === "sending" ? (
+            "Sending…"
+          ) : (
+            resendState
+          )}
+        </AuthSwitch>
+      </>
+    );
+  }
+
+  /* Signed in already: the effect is taking them on. */
+  if (userInfo && !isLoading) {
+    return <AuthHeading title="Signing you in…" />;
+  }
+
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" className="flex-none" aria-hidden>
-      <path
-        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
-      />
-      <path
-        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-        fill="#EA4335"
-      />
-    </svg>
+    <>
+      <AuthHeading title={COPY[mode].title}>{COPY[mode].body}</AuthHeading>
+
+      {error && <AuthNotice tone="error">{error}</AuthNotice>}
+
+      {mode !== "forgot" && (
+        <>
+          <GoogleButton onClick={startGoogle} disabled={submitting} />
+          <OrDivider />
+        </>
+      )}
+
+      {resetSent ? (
+        <AuthNotice tone="success">{resetSent} The link works for an hour.</AuthNotice>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {mode === "signup" && (
+            <AuthField label="Name" htmlFor="name">
+              <TextInput
+                id="name"
+                name="name"
+                required
+                maxLength={80}
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={submitting}
+                className={authControlClass}
+              />
+            </AuthField>
+          )}
+
+          <AuthField label="Email" htmlFor="email">
+            <TextInput
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              inputMode="email"
+              placeholder="you@university.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={submitting}
+              className={authControlClass}
+            />
+          </AuthField>
+
+          {mode !== "forgot" && (
+            <AuthField
+              label="Password"
+              htmlFor="password"
+              hint={mode === "signup" ? PASSWORD_RULE : undefined}
+              aside={
+                mode === "signin" && (
+                  <button
+                    type="button"
+                    onClick={() => switchTo("forgot")}
+                    className={`-my-2 py-2 text-[14px] ${quietLink}`}
+                  >
+                    Forgot password?
+                  </button>
+                )
+              }
+            >
+              <PasswordInput
+                id="password"
+                name="password"
+                required
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={submitting}
+                className={authControlClass}
+              />
+            </AuthField>
+          )}
+
+          {mode === "signup" && (
+            <AuthField label="Confirm password" htmlFor="confirmPassword">
+              <PasswordInput
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={submitting}
+                className={authControlClass}
+              />
+            </AuthField>
+          )}
+
+          <Button type="submit" size="lg" className={`mt-2 ${authButtonClass}`} disabled={submitting}>
+            {submitting
+              ? mode === "signin"
+                ? "Signing in…"
+                : mode === "signup"
+                  ? "Creating account…"
+                  : "Sending…"
+              : mode === "signin"
+                ? "Sign in"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Send reset link"}
+          </Button>
+        </form>
+      )}
+
+      <AuthSwitch>
+        {mode === "signin" ? "New to Socrate? " : mode === "signup" ? "Already have an account? " : "Remembered it? "}
+        <button
+          type="button"
+          onClick={() => switchTo(mode === "signin" ? "signup" : "signin")}
+          className={`-my-2 py-2 ${inkLink}`}
+        >
+          {mode === "signin" ? "Create an account" : "Sign in"}
+        </button>
+      </AuthSwitch>
+
+      {mode !== "forgot" && (
+        <AuthFooter>
+          <p>
+            {/* Each phrase kept whole, so a narrow screen never strands "required". */}
+            {FREE_TIER_NOTE.split(" · ").map((phrase, i) => (
+              <span key={phrase}>
+                {i > 0 && " · "}
+                <span className="whitespace-nowrap">{phrase}</span>
+              </span>
+            ))}
+          </p>
+          <p>
+            By continuing you agree to our{" "}
+            <Link href="/terms" className={footerLink}>
+              Terms &amp; Conditions
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className={footerLink}>
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        </AuthFooter>
+      )}
+    </>
   );
 }
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
-
   return (
-    <div className="grid min-h-dvh bg-paper text-ink lg:grid-cols-2">
-      {/* Brand panel. Below lg it follows the form: on a phone the reason
-          you came here — signing in — should be on the first screen. */}
-      <section className="order-last flex min-w-0 flex-col justify-between gap-12 border-t border-line bg-surface pl-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-left))] pr-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-right))] pb-[max(clamp(2rem,4vw,3rem),env(safe-area-inset-bottom))] pt-[clamp(2.5rem,4vw,2.75rem)] lg:order-none lg:border-r lg:border-t-0">
-        <Link
-          href="/"
-          className="-my-2.5 hidden self-start py-2.5 text-[1.0625rem] font-semibold tracking-[-0.02em] lg:block"
-        >
-          Socrate
-        </Link>
-
-        <div className="max-w-[440px]">
-          <MonoLabel className="mb-[clamp(1.25rem,2.6vw,1.75rem)] tracking-[0.16em] text-ink-soft">
-            Learning made easy
-          </MonoLabel>
-          <p className="text-[clamp(1.5rem,3.2vw,2.125rem)] font-medium leading-[1.18] tracking-[-0.03em] text-balance">
-            Drop your notes. Walk out knowing everything.
-          </p>
-          <p className="mt-[clamp(1.125rem,2.2vw,1.5rem)] max-w-[360px] text-body leading-[1.7] text-pretty text-ink-soft">
-            Upload any document and have an AI tutor explain, summarize, and
-            quiz you instantly.
-          </p>
-        </div>
-
-        <dl className="grid grid-cols-3 gap-5 border-t border-line-strong pt-[clamp(1.25rem,2.4vw,1.625rem)]">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="flex flex-col-reverse">
-              <MonoLabel as="dt" className="mt-1 tracking-[0.1em]">
-                {stat.label}
-              </MonoLabel>
-              <dd className="text-xl font-medium tracking-[-0.03em]">{stat.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      {/* Sign-in panel */}
-      <section className="flex min-w-0 flex-col pl-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-left))] pr-[max(clamp(1.5rem,4.5vw,4rem),env(safe-area-inset-right))] pb-[clamp(3rem,7vw,5rem)] pt-[max(1rem,env(safe-area-inset-top))] lg:justify-center lg:pt-[clamp(3.5rem,7vw,5rem)]">
-        <Link
-          href="/"
-          className="inline-flex h-12 items-center self-start text-[1.0625rem] font-semibold tracking-[-0.02em] lg:hidden"
-        >
-          Socrate
-        </Link>
-        <div className="mx-auto mt-[clamp(2.5rem,10vw,4.5rem)] w-full max-w-[400px] lg:mt-0">
-          <h1 className="text-[clamp(1.625rem,3vw,2.125rem)] font-medium leading-[1.1] tracking-[-0.032em]">
-            {isLogin ? "Welcome back" : "Create your account"}
-          </h1>
-          <p className="mb-[clamp(1.875rem,4vw,2.5rem)] mt-3.5 text-body text-pretty text-ink-soft">
-            {isLogin
-              ? "Sign in to continue learning where you left off."
-              : "Start your AI-powered study journey in seconds."}
-          </p>
-
-          <a
-            href={`${process.env.NEXT_PUBLIC_BACKENDBASEURL}/auth/google`}
-            className="flex h-[52px] items-center justify-center gap-3 rounded-lg border border-line-control bg-card text-[15px] font-medium tracking-[-0.008em] text-ink transition-colors hover:border-[#c9c3b6] hover:bg-white"
-          >
-            <GoogleMark />
-            Continue with Google
-          </a>
-
-          <p className="mt-[clamp(1.5rem,3vw,1.875rem)] text-[13px] leading-[1.7] text-ink-soft">
-            {FREE_TIER_NOTE}
-          </p>
-
-          <div className="mt-[clamp(1.875rem,4vw,2.5rem)] flex flex-col gap-3.5 border-t border-line-strong pt-[22px]">
-            <p className="text-[13px] leading-[1.7] text-ink-muted">
-              By continuing you agree to our{" "}
-              <Link href="/terms" className={underlined}>
-                Terms &amp; Conditions
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className={underlined}>
-                Privacy Policy
-              </Link>
-              .
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsLogin((v) => !v)}
-              className={`-my-3 self-start py-3 text-left text-[13px] font-medium ${underlined}`}
-            >
-              {isLogin
-                ? "New to Socrate? Create an account"
-                : "Already have an account? Sign in"}
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
+    <AuthShell>
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
+    </AuthShell>
   );
 }

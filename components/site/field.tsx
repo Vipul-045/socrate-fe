@@ -43,6 +43,34 @@ export const TextInput = React.forwardRef<
 ));
 TextInput.displayName = "TextInput";
 
+/** A password field with a Show/Hide toggle — on a phone keyboard, seeing what you typed matters. */
+export const PasswordInput = React.forwardRef<
+  HTMLInputElement,
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">
+>(({ className, ...props }, ref) => {
+  const [visible, setVisible] = React.useState(false);
+  return (
+    <div className="relative">
+      <input
+        ref={ref}
+        type={visible ? "text" : "password"}
+        className={cn(controlClasses, "pr-[4.5rem]", className)}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        aria-pressed={visible}
+        className="absolute inset-y-0 right-1.5 my-1.5 rounded-md px-3 text-[13px] font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink"
+      >
+        {visible ? "Hide" : "Show"}
+      </button>
+    </div>
+  );
+});
+PasswordInput.displayName = "PasswordInput";
+
 export const TextArea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
