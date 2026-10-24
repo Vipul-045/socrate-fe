@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/site/primitives";
 import { NAV_LINKS } from "@/lib/content";
 import { useUser } from "@/components/provider/authoprovider";
+import { useEnterApp } from "@/hooks/use-enter-app";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
@@ -21,8 +22,16 @@ export function Navbar() {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
   // Same backend session the pricing and checkout pages read, so the nav
-  // and the plan buttons always agree on who's signed in.
-  const { userInfo, isLoading, logout } = useUser();
+  // and the plan buttons always agree on who's signed in — and on their plan.
+  const { userInfo, tier, isLoading, logout } = useUser();
+  const { enterApp, entering } = useEnterApp();
+
+  // Signed out: start an account (which leads to the plans). Signed in:
+  // straight into the app, as the same account.
+  const appLabel = entering ? "Opening…" : tier === "pro" ? "Go to app" : "Get started free";
+
+  // Signing in from here brings a member back to this page (see /login).
+  const loginHref = pathname === "/" ? "/login" : `/login?from=${encodeURIComponent(pathname)}`;
 
   // At the top the bar melts into the page; once content passes under it,
   // it frosts over and picks up its rule. The state only flips when the
@@ -54,8 +63,6 @@ export function Navbar() {
       lg.removeEventListener("change", onBreakpoint);
     };
   }, [open]);
-
-  const firstName = userInfo?.name?.split(" ")[0];
 
   // logout() clears the user and membership even if the backend call fails;
   // LogOutUser has already logged the error.
@@ -123,17 +130,17 @@ export function Navbar() {
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   Log out
                 </Button>
-                <Button size="sm" asChild>
-                  <Link href="/pricing">Hey {firstName ?? "there"}</Link>
+                <Button size="sm" className="px-6" onClick={() => enterApp()} disabled={entering}>
+                  {appLabel}
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">Log In</Link>
+                  <Link href={loginHref}>Log In</Link>
                 </Button>
                 <Button size="sm" className="px-6" asChild>
-                  <Link href="/login">Get Started Free</Link>
+                  <Link href="/login?mode=signup">Get started</Link>
                 </Button>
               </>
             )}
@@ -156,12 +163,22 @@ export function Navbar() {
                 tabIndex={open ? -1 : undefined}
                 asChild
               >
-                <Link href="/login">
-                  <span className="sm:hidden">Get started</span>
-                  <span className="hidden sm:inline">Get Started Free</span>
-                </Link>
+                <Link href="/login?mode=signup">Get started</Link>
               </Button>
-            ) : null}
+            ) : (
+              <Button
+                size="sm"
+                className={cn(
+                  "relative h-10 rounded-lg px-4 transition-opacity duration-200 after:absolute after:-inset-y-0.5 after:inset-x-0 after:content-[''] sm:px-5",
+                  open && "pointer-events-none opacity-0",
+                )}
+                tabIndex={open ? -1 : undefined}
+                onClick={() => enterApp()}
+                disabled={entering}
+              >
+                {appLabel}
+              </Button>
+            )}
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
@@ -222,8 +239,14 @@ export function Navbar() {
           <div className="mt-auto flex flex-col gap-2.5 pt-10 sm:flex-row-reverse sm:[&>*]:flex-1">
             {userInfo ? (
               <>
-                <Button size="lg" className="h-12 w-full rounded-lg text-[15px]" asChild>
-                  <Link href="/pricing">Hey {firstName ?? "there"}</Link>
+                <Button
+                  size="lg"
+                  className="h-12 w-full rounded-lg text-[15px]"
+                  onClick={() => enterApp()}
+                  disabled={entering}
+                >
+                  {appLabel}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Button>
                 <Button
                   size="lg"
@@ -237,8 +260,8 @@ export function Navbar() {
             ) : (
               <>
                 <Button size="lg" className="h-12 w-full rounded-lg text-[15px]" asChild>
-                  <Link href="/login">
-                    Get Started Free
+                  <Link href="/login?mode=signup">
+                    Get started
                     <ArrowRight className="h-4 w-4" aria-hidden />
                   </Link>
                 </Button>
@@ -248,7 +271,7 @@ export function Navbar() {
                   variant="outline"
                   asChild
                 >
-                  <Link href="/login">Log In</Link>
+                  <Link href={loginHref}>Log In</Link>
                 </Button>
               </>
             )}

@@ -21,8 +21,9 @@ import {
   inkLink,
   quietLink,
 } from "@/components/site/auth-shell";
-import { useUser } from "@/components/provider/authoprovider";
+import { useUser, type PlanTier } from "@/components/provider/authoprovider";
 import { FREE_TIER_NOTE } from "@/lib/content";
+import { safeInternalPath } from "@/lib/navigation";
 import {
   PASSWORD_RULE,
   authErrorMessage,
@@ -35,9 +36,14 @@ import {
 } from "@/lib/auth-api";
 
 /* Signing in here signs you in on app.socrate.in too: one account and one
-   session, kept by the backend for both sites. Without a `next` page, a
-   signed-in reader goes on to the app, as Google sign-in always has. */
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
+   session, kept by the backend for both sites. Where a signed-in reader goes
+   next:
+   - `?next=` — a page everyone must reach (checkout, say);
+   - otherwise a Pro member returns to the page they were on when they chose
+     to sign in (`?from=`, or the page that loaded this one), else the home
+     page — their nav now offers "Go to app", so nothing whisks them away;
+   - everyone else, every new account included, sees the plans first.
+   The plan is the backend's answer, never the browser's. */
 
 type Mode = "signin" | "signup" | "forgot";
 
@@ -52,15 +58,34 @@ const COPY: Record<Mode, { title: string; body: string }> = {
 
 /** A page on this site to go on to, or null — never another site. */
 function safeNext(raw: string | null): string | null {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
-  return raw;
+  return safeInternalPath(raw, "") || null;
+}
+
+/* Sign-in pages, and checkout, aren't somewhere to be returned to. */
+const NOT_A_RETURN = /^\/(login|reset-password|verify-email|checkout)(\/|\?|#|$)/;
+
+/** The page to bring a signed-in member back to, or null. */
+function returnPath(raw: string | null): string | null {
+  const path = safeNext(raw);
+  return path && !NOT_A_RETURN.test(path) ? path : null;
+}
+
+/** The page on this site whose link loaded this one, when it was a full page load. */
+function referrerPath(): string | null {
+  try {
+    const ref = new URL(document.referrer);
+    return ref.origin === window.location.origin ? returnPath(`${ref.pathname}${ref.search}`) : null;
+  } catch {
+    return null;
+  }
 }
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
-  const { userInfo, isLoading, refresh } = useUser();
+  const from = returnPath(searchParams.get("from"));
+  const { userInfo, tier, isLoading, refresh } = useUser();
 
   const initialMode = searchParams.get("mode");
   const [mode, setMode] = useState<Mode>(
@@ -83,18 +108,22 @@ function LoginForm() {
   const [resendState, setResendState] = useState<"idle" | "sending" | string>("idle");
 
   const leaving = useRef(false);
-  const goOn = useCallback(() => {
-    if (leaving.current) return;
-    leaving.current = true;
-    if (next) router.replace(next);
-    else window.location.assign(APP_URL);
-  }, [next, router]);
+  const goOn = useCallback(
+    (plan: PlanTier | null) => {
+      if (leaving.current) return;
+      leaving.current = true;
+      if (next) router.replace(next);
+      else if (plan === "pro") router.replace(from ?? referrerPath() ?? "/");
+      else router.replace("/pricing");
+    },
+    [next, from, router],
+  );
 
   /* Already signed in — here, on app.socrate.in, or by Google bringing the
      reader back to this page — so there is nothing to do here. */
   useEffect(() => {
-    if (!isLoading && userInfo && !signedUp && !submitting) goOn();
-  }, [isLoading, userInfo, signedUp, submitting, goOn]);
+    if (!isLoading && userInfo && !signedUp && !submitting) goOn(tier);
+  }, [isLoading, userInfo, tier, signedUp, submitting, goOn]);
 
   const switchTo = (nextMode: Mode) => {
     setMode(nextMode);
@@ -106,8 +135,13 @@ function LoginForm() {
 
   const startGoogle = () => {
     // Google brings the reader back here; the effect above takes them on.
-    const back = `${window.location.origin}/login${next ? `?next=${encodeURIComponent(next)}` : ""}`;
-    window.location.assign(googleSignInUrl(back));
+    // Where they came from is read now: after Google, the referrer is Google.
+    const params = new URLSearchParams();
+    if (next) params.set("next", next);
+    const cameFrom = from ?? referrerPath();
+    if (cameFrom) params.set("from", cameFrom);
+    const query = params.toString();
+    window.location.assign(googleSignInUrl(`${window.location.origin}/login${query ? `?${query}` : ""}`));
   };
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -125,9 +159,9 @@ function LoginForm() {
     try {
       if (mode === "signin") {
         await signInWithPassword(email.trim(), password);
-        // A `next` page here is reached without a reload: it must see the session.
-        await refresh();
-        goOn();
+        // A `next` page here is reached without a reload: it must see the
+        // session — and where to go depends on the plan it reports.
+        goOn((await refresh()).tier);
         return;
       }
       if (mode === "signup") {
@@ -162,8 +196,8 @@ function LoginForm() {
             ? `We've sent a link to ${signedUp.email} to verify your email. You can start studying now and verify when you're ready.`
             : "We couldn't send the verification email just now. You can start studying now and ask for another below."}
         </AuthNotice>
-        <Button type="button" size="lg" className={authButtonClass} onClick={goOn}>
-          Continue
+        <Button type="button" size="lg" className={authButtonClass} onClick={() => goOn(tier)}>
+          {next ? "Continue" : "Choose your plan"}
         </Button>
         <AuthSwitch>
           {resendState === "idle" ? (

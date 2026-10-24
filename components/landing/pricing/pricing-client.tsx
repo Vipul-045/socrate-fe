@@ -7,12 +7,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Container, MonoLabel, PageHeader, Section } from "@/components/site/primitives";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
-import { GetMemberPlans, grantFreePlan, MemberPlan } from "@/lib/services";
+import { GetMemberPlans, MemberPlan } from "@/lib/services";
 import { useUser } from "@/components/provider/authoprovider";
+import { useEnterApp } from "@/hooks/use-enter-app";
 import type { DisplayPrice } from "@/lib/pricing";
+import { planTagline } from "@/lib/payment";
 import { cn } from "@/lib/utils";
-
-const AppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { INR: "₹", USD: "$" };
 const symbolFor = (currency?: string) =>
@@ -89,14 +89,14 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
   const [plans, setPlans] = useState<MemberPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [claimingPlanId, setClaimingPlanId] = useState<string | null>(null);
 
-  const { userInfo, membership, isLoading: userLoading, refresh } = useUser();
+  const { userInfo, membership, tier, isLoading: userLoading } = useUser();
+  const { enterApp, entering } = useEnterApp();
   const router = useRouter();
 
   // The backend only returns a membership when it's active.
   const currentPlan = membership?.plan ?? null;
-  const hasPaidPlan = (currentPlan?.price ?? 0) > 0;
+  const hasPaidPlan = tier === "pro";
 
   useEffect(() => {
     let cancelled = false;
@@ -122,29 +122,14 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
     };
   }, []);
 
-  // Sends an unauthenticated visitor to log in and come straight back to
-  // pricing so they can pick up the flow (free grant or checkout) right after.
-  const redirectToLogin = () => {
-    router.push(`/login?next=${encodeURIComponent("/pricing")}`);
-  };
+  // Checkout remembers it was opened from here, so "Back" returns here.
+  const checkoutHref = (plan: MemberPlan) =>
+    `/checkout?planId=${encodeURIComponent(plan._id)}&returnTo=${encodeURIComponent("/pricing")}`;
 
-  const handleFreePlan = async (plan: MemberPlan) => {
-    if (!userInfo) {
-      redirectToLogin();
-      return;
-    }
-
-    setError(null);
-    setClaimingPlanId(plan._id);
-    try {
-      await grantFreePlan(plan._id);
-      await refresh(); // pick up the new membership before leaving
-      window.location.href = AppUrl;
-    } catch (err) {
-      console.error("Failed to grant free plan:", err);
-      setError("Couldn't activate your free plan. Please try again.");
-      setClaimingPlanId(null);
-    }
+  // A visitor makes an account (or signs in) first. Free comes back here to
+  // see the plans; a paid plan goes straight on to its checkout.
+  const signUpThen = (next: string) => {
+    router.push(`/login?mode=signup&next=${encodeURIComponent(next)}`);
   };
 
   const hasMaxPlan = plans.some((plan) => plan.name === "Max");
@@ -175,8 +160,8 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
             {plans.map((plan) => {
               const highlighted = plan.name === "Pro";
               const isFree = plan.price === 0;
-              const isClaiming = claimingPlanId === plan._id;
-              const isCurrent = currentPlan?.planId === plan._id;
+              // Free is "current" for every signed-in reader not on a paid plan.
+              const isCurrent = isFree ? !!userInfo && !hasPaidPlan : currentPlan?.planId === plan._id && hasPaidPlan;
               const price = `${symbolFor(plan.currency)}${plan.price}`;
               // Only show the promotional strike-through when it describes
               // the price the backend is actually charging.
@@ -187,12 +172,12 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
                 <Column
                   key={plan._id}
                   highlighted={highlighted}
-                  badge={highlighted ? "Most popular" : undefined}
+                  badge={isCurrent ? "Your plan" : highlighted ? "Most popular" : undefined}
                   summary={
                     <>
                       <h2 className="mb-1.5 text-title">{plan.name}</h2>
                       <p className="text-small text-ink-soft">
-                        {plan.description}
+                        {planTagline(plan.name, plan.description)}
                       </p>
 
                       <div className="mt-[26px] flex flex-wrap items-baseline gap-x-2.5">
@@ -215,55 +200,63 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
                   }
                   actions={
                     <>
-                      {isCurrent ? (
+                      {isFree ? (
+                        hasPaidPlan ? (
+                          // A paid member can't drop to Free from here — the
+                          // backend refuses it until the paid plan is cancelled.
+                          <Button variant="outline" className={planButton} disabled>
+                            Included in {currentPlan?.name}
+                          </Button>
+                        ) : userInfo ? (
+                          // Free needs no checkout: into the app, as this account.
+                          <Button
+                            variant="outline"
+                            className={planButton}
+                            onClick={() => enterApp(plan._id)}
+                            disabled={entering}
+                          >
+                            {entering ? "Opening Socrate…" : "Get started free"}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className={planButton}
+                            onClick={() => signUpThen("/pricing")}
+                            disabled={userLoading}
+                          >
+                            Get started free
+                          </Button>
+                        )
+                      ) : isCurrent ? (
+                        // Already theirs: nothing to buy, so the way in instead.
                         <Button
                           variant={highlighted ? "default" : "outline"}
                           className={planButton}
-                          disabled
+                          onClick={() => enterApp()}
+                          disabled={entering}
                         >
-                          {isFree
-                            ? "Your current plan"
-                            : `You're a ${plan.name} member`}
+                          {entering ? "Opening Socrate…" : "Go to app"}
                         </Button>
-                      ) : isFree ? (
-                        // A paid member can't drop to Free from here — the
-                        // backend refuses it until the paid plan is cancelled.
-                        <Button
-                          variant="outline"
-                          className={planButton}
-                          onClick={() => handleFreePlan(plan)}
-                          disabled={userLoading || isClaiming || hasPaidPlan}
-                        >
-                          {hasPaidPlan
-                            ? `Included in ${currentPlan?.name}`
-                            : isClaiming
-                              ? "Activating…"
-                              : "Get Started"}
-                        </Button>
-                      ) : !highlighted ? (
-                        <Button
-                          variant="outline"
-                          className={planButton}
-                          asChild
-                        >
-                          <Link href="/login">Choose Plan</Link>
+                      ) : hasPaidPlan && (currentPlan?.price ?? 0) >= plan.price ? (
+                        <Button variant="outline" className={planButton} disabled>
+                          Included in {currentPlan?.name}
                         </Button>
                       ) : userInfo ? (
                         <Button
+                          variant={highlighted ? "default" : "outline"}
                           className={planButton}
-                          onClick={() =>
-                            router.push(`/checkout?planId=${plan._id}`)
-                          }
+                          asChild
                         >
-                          Start your 7 day free trial
+                          <Link href={checkoutHref(plan)}>Upgrade to {plan.name}</Link>
                         </Button>
                       ) : (
                         <Button
+                          variant={highlighted ? "default" : "outline"}
                           className={planButton}
-                          onClick={redirectToLogin}
+                          onClick={() => signUpThen(checkoutHref(plan))}
                           disabled={userLoading}
                         >
-                          Start your 7 day free trial
+                          Upgrade to {plan.name}
                         </Button>
                       )}
 
@@ -329,8 +322,8 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
         )}
 
         <p className="mt-[clamp(1.75rem,3vw,2.25rem)] border-t border-[#eae6de] pt-5 text-xs leading-relaxed text-ink-muted">
-          Prices shown in your local currency. All plans billed securely; cancel
-          anytime from Settings.
+          Prices shown in your local currency. Payments are secured by Razorpay,
+          and paid plans don&apos;t renew automatically.
         </p>
       </Container>
     </Section>

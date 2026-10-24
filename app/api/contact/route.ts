@@ -10,7 +10,7 @@ import { z } from "zod";
  * CONTACT_FROM_EMAIL. Without an API key, development logs the submission
  * so the form still works; production refuses rather than dropping messages.
  */
-const CONTACT_TO_EMAIL = "hello@socrate.in";
+const CONTACT_TO_EMAIL = "socratedotin@gmail.com";
 const DEFAULT_FROM_EMAIL = "Socrate Contact <contact@socrate.in>";
 
 const schema = z.object({
@@ -20,7 +20,7 @@ const schema = z.object({
   message: z.string().trim().min(10).max(5000),
 });
 
-const DELIVERY_ERROR = "We couldn't deliver that. Email hello@socrate.in instead.";
+const DELIVERY_ERROR = "We couldn't deliver that. Email socratedotin@gmail.com instead.";
 
 export async function POST(request: Request) {
   let body: unknown;

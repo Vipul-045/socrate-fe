@@ -60,6 +60,9 @@ export interface OrderSummaryResponse {
     durationDays: number;
   };
   breakdown: OrderPriceBreakdown;
+  /** The reader already has this plan (or a better one): paying would buy nothing. */
+  alreadySubscribed?: boolean;
+  activeUntil?: string | null;
 }
 
 // Pre-payment price breakdown (base price + convenience fee + GST) for the
@@ -77,17 +80,51 @@ export interface CreateOrderResponse {
 }
 
 // Called straight from the browser (not via a Next route) so the backend's
-// session cookie on its own domain goes along with the request.
+// session cookie on its own domain goes along with the request. Only the plan
+// is sent: the backend prices it, and hands back the same open order for a
+// repeat request (double click, retry, second tab). 409 ALREADY_SUBSCRIBED
+// when the reader already has it.
 export function createRazorpayOrder(planId: string) {
   return api.post<CreateOrderResponse>("/Payment/create-order", { planId });
 }
 
 // Backend recomputes the signature against its Order record, marks it paid
-// and grants the membership.
+// and grants the membership. 400 VERIFICATION_FAILED proves nothing either
+// way — the order's status (below) is asked next.
 export function verifyRazorpayPayment(response: RazorpayPaymentResponse) {
-  return api.post<{ success: boolean; message?: string }>("/Payment/verify-payment", {
+  return api.post<{ success: boolean; status?: "paid"; message?: string }>("/Payment/verify-payment", {
     razorpay_order_id: response.razorpay_order_id,
     razorpay_payment_id: response.razorpay_payment_id,
     razorpay_signature: response.razorpay_signature,
   });
+}
+export type OrderStatus =
+  /** No payment attempted yet. */
+  | "created"
+  /** A payment is with the bank (UPI awaiting approval, authorised, pending). */
+  | "processing"
+  | "paid"
+  | "failed"
+  /** Replaced by a newer checkout. */
+  | "expired"
+  /** Razorpay couldn't be asked just now — check again. */
+  | "unknown";
+
+export interface OrderStatusResponse {
+  success: boolean;
+  order: {
+    id: string;
+    status: OrderStatus;
+    /** A code from lib/payment.ts' PaymentFailureCode when status is "failed". */
+    failureReason?: string;
+    planId: string;
+    amount: number;
+    currency: string;
+  };
+}
+
+// The backend's answer, not the browser's: an unsettled order is checked
+// with Razorpay itself, and a payment found there is granted on the spot.
+export function getPaymentStatus(orderId: string) {
+  return api.get<OrderStatusResponse>(`/Payment/order/${encodeURIComponent(orderId)}`);
 }
