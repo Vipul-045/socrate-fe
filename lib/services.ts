@@ -42,12 +42,12 @@ export function grantFreePlan(planId: string) {
 }
 
 export interface OrderPriceBreakdown {
-  baseAmount: number; // paise
-  convenienceFee: number; // paise
-  gstAmount: number; // paise
+  baseAmount: number; // paise — the plan's price, all taxes included
+  taxableAmount: number; // paise — for the invoice: baseAmount less the GST inside it
+  gstAmount: number; // paise — the GST included in the price, never added to it
   gstPercent: number;
-  convenienceFeePercent: number;
-  totalAmount: number; // paise — the amount actually charged
+  gstInclusive: true;
+  totalAmount: number; // paise — the amount actually charged, === baseAmount
   currency: string;
 }
 
@@ -65,8 +65,8 @@ export interface OrderSummaryResponse {
   activeUntil?: string | null;
 }
 
-// Pre-payment price breakdown (base price + convenience fee + GST) for the
-// checkout page. Mirrors exactly what createOrder will charge — same backend
+// Pre-payment price for the checkout page: the plan's price, taxes included,
+// is the total. Mirrors exactly what createOrder will charge — same backend
 // util computes both, so these numbers never drift from what Razorpay bills.
 export function getOrderSummary(planId: string) {
   return api.get<OrderSummaryResponse>(`/Payment/order-summary/${planId}`);

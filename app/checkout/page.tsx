@@ -625,7 +625,7 @@ function CheckoutPageInner() {
           <StatusPanel
             tone="success"
             label="Payment successful"
-            title={`You're now on ${planName}`}
+            title={`Your ${planName} plan is active.`}
             actions={
               <PanelAction primary onClick={() => window.location.assign(APP_URL)}>
                 Go to Socrate
@@ -648,7 +648,7 @@ function CheckoutPageInner() {
               ) : undefined
             }
           >
-            <p>Your Socrate {planName} plan is active.</p>
+            <p>Thanks for upgrading. Everything in Socrate {planName} is ready to use.</p>
           </StatusPanel>
         </CheckoutColumn>
       );
@@ -659,11 +659,11 @@ function CheckoutPageInner() {
           <StatusPanel
             tone="error"
             label="Payment failed"
-            title="We couldn't complete your payment."
+            title="Your payment couldn't be completed."
             actions={
               <>
                 <PanelAction primary onClick={startPayment}>
-                  Try payment again
+                  Try again
                 </PanelAction>
                 {back}
               </>
@@ -686,7 +686,7 @@ function CheckoutPageInner() {
             actions={
               <>
                 <PanelAction primary onClick={startPayment}>
-                  Try payment again
+                  Try again
                 </PanelAction>
                 {back}
               </>
@@ -703,7 +703,7 @@ function CheckoutPageInner() {
           <StatusPanel
             tone="waiting"
             label="Confirming"
-            title={phase.unverified ? "We couldn't confirm your payment yet" : "Your payment is still being confirmed"}
+            title="We're still confirming your payment."
             actions={
               <>
                 <PanelAction
@@ -849,18 +849,11 @@ function CheckoutPageInner() {
             <span className="text-small text-ink-soft">/{period}</span>
           </p>
 
+          {/* The plan's price is the total: taxes are included, nothing is added. */}
           <dl className="mt-6 flex flex-col gap-3 border-t border-line pt-5 text-[14.5px]">
             <div className="flex justify-between gap-4">
               <dt className="text-ink-soft">Plan price</dt>
               <dd className="tabular-nums text-ink">{formatAmount(breakdown.baseAmount, breakdown.currency)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink-soft">Convenience fee ({breakdown.convenienceFeePercent}%)</dt>
-              <dd className="tabular-nums text-ink">{formatAmount(breakdown.convenienceFee, breakdown.currency)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink-soft">GST ({breakdown.gstPercent}%)</dt>
-              <dd className="tabular-nums text-ink">{formatAmount(breakdown.gstAmount, breakdown.currency)}</dd>
             </div>
           </dl>
 
@@ -868,6 +861,7 @@ function CheckoutPageInner() {
             <span className="font-medium text-ink">Total due today</span>
             <span className="text-[1.375rem] font-medium tracking-[-0.02em] text-ink tabular-nums">{total}</span>
           </div>
+          <p className="mt-1.5 text-right text-[13px] text-ink-muted">Inclusive of all taxes</p>
 
           {phase.kind === "ready" && phase.notice ? (
             <p
