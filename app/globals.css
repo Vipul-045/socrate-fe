@@ -94,15 +94,6 @@
       padding-right: max(2rem, env(safe-area-inset-right));
     }
   }
-
-  /* Diagonal hatch for placeholder wells (the demo video). */
-  .u-hatch {
-    background: repeating-linear-gradient(
-      135deg,
-      #f4f1eb 0 12px,
-      #fdfcfa 12px 24px
-    );
-  }
 }
 
 ::selection {

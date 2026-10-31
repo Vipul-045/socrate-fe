@@ -9,6 +9,7 @@ import { Faq } from "@/components/site/faq";
 import { CtaBand } from "@/components/site/cta-band";
 import { JsonLd } from "@/components/site/json-ld";
 import { FAQS } from "@/lib/content";
+import demoPoster from "@/public/videos/socrate-demo-poster.jpg";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_TITLE,
@@ -29,7 +30,11 @@ export default function HomePage() {
     <SiteShell>
       <JsonLd data={homeJsonLd()} />
       <Hero />
-      <DemoVideo />
+      <DemoVideo
+        src="/videos/Socrate-Product-Demo.mp4"
+        poster={demoPoster}
+        duration={50}
+      />
       <Showcase />
       <HowItWorks />
       <WhoItsFor />
