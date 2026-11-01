@@ -61,15 +61,23 @@ const sections: LegalSection[] = [
     items: [
       {
         label: "Billing:",
-        text: "Paid plans are billed monthly or annually. All payments are processed securely via Stripe.",
+        text: "Pro is a subscription, billed monthly or yearly as you choose at checkout. Payments are processed securely by Razorpay.",
       },
       {
-        label: "Refunds:",
-        text: "We offer a 7-day refund policy for new subscriptions. After 7 days, payments are non-refundable.",
+        label: "Free trial:",
+        text: "First-time subscribers get a 7-day free trial, and nothing is charged until it ends. The trial is available once per account: if you subscribe again later, you are charged from the start.",
+      },
+      {
+        label: "Renewal:",
+        text: "Your subscription renews automatically at the end of each billing period, at the price shown at checkout, until you cancel. A coupon discount applies only to the charges its offer covers; later renewals are at the regular price.",
       },
       {
         label: "Cancellation:",
-        text: "You can cancel your subscription at any time from Settings. You will retain access until the end of your billing period.",
+        text: "You can cancel at any time from Settings → Plan & billing in the app. If you cancel during your free trial, it ends straight away and you are never charged. If you cancel a paid subscription, you keep access until the end of the period you have paid for, and it does not renew after that — unless you cancel within the 48-hour refund window below, in which case your payment is refunded and your access ends straight away.",
+      },
+      {
+        label: "Refunds:",
+        text: "If you subscribe without a free trial (because you have had one before), you can cancel within 48 hours of your first payment for a full refund of that payment; your access ends when you cancel. Renewal payments are non-refundable: cancelling stops future renewals rather than refunding the current period. If you are charged after cancelling, or charged twice for the same period, contact us and we will refund it in full. Nothing in these terms limits any rights you have under applicable law.",
       },
     ],
   },
@@ -117,7 +125,7 @@ const sections: LegalSection[] = [
     items: [
       {
         label: "Questions?",
-        text: "Email us at socratedotin@gmail.com — we respond within 48 hours.",
+        text: "Email us at support@socrate.in — we respond within 48 hours.",
       },
     ],
   },
@@ -127,7 +135,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms & Conditions"
-      updated="March 28, 2026"
+      updated="November 2, 2026"
       intro="Please read these terms carefully before using Socrate. By using the platform, you agree to be bound by them. We've kept it plain and simple — no legal walls."
       sections={sections}
     />
