@@ -155,7 +155,8 @@ export interface CreateSubscriptionResponse {
   success: boolean;
   subscription_id: string;
   key_id: string;
-  trial_end: string;
+  /** null: no trial (the account has had its one) — the first charge is taken in Checkout. */
+  trial_end: string | null;
   /** Only when a coupon was applied. */
   coupon_applied?: AppliedCoupon;
 }
@@ -170,4 +171,73 @@ export function createSubscription(billingCycle: BillingCycle, couponCode?: stri
     billingCycle,
     ...(couponCode ? { couponCode } : {}),
   });
+}
+
+export interface SubscriptionCycle {
+  /** The MembershipPlan this cycle grants (what /pricing links to as planId). */
+  planId: string;
+  name: string;
+  description: string | null;
+  /** Paise, charged every cycle after the trial — Razorpay's own price. */
+  amount: number;
+  currency: string;
+}
+
+export interface SubscriptionSummaryResponse {
+  success: boolean;
+  trialDays: number;
+  /** One free trial per account: false once this reader has had theirs — then it's charged today. */
+  trialEligible: boolean;
+  /** Only the cycles the backend can sell. */
+  cycles: Partial<Record<BillingCycle, SubscriptionCycle>>;
+  /** The reader already has the plan (a trial, a subscription, or a paid order). */
+  alreadySubscribed: boolean;
+  activeUntil: string | null;
+}
+
+// What /checkout shows before subscribing. 404 PLAN_NOT_FOUND when no cycle
+// can be sold; 502 PRICE_UNAVAILABLE when Razorpay couldn't give the price.
+export function getSubscriptionSummary() {
+  return api.get<SubscriptionSummaryResponse>("/api/subscriptions/summary");
+}
+
+/** Pending until the mandate is authorised; trialing / active give the plan. */
+export type SubscriptionStatus =
+  | "pending"
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "halted"
+  | "cancelled"
+  | "expired";
+
+// Checkout's success callback. The backend checks Razorpay's signature and
+// starts the trial. 400 VERIFICATION_FAILED proves nothing either way — the
+// status (below) is asked next.
+export function verifySubscription(response: RazorpayPaymentResponse) {
+  return api.post<{ success: boolean; status: SubscriptionStatus; trial_end?: string | null }>("/api/subscriptions/verify", {
+    razorpay_payment_id: response.razorpay_payment_id,
+    razorpay_subscription_id: response.razorpay_subscription_id,
+    razorpay_signature: response.razorpay_signature,
+  });
+}
+
+export interface SubscriptionCheckoutStatusResponse {
+  success: boolean;
+  subscription: {
+    id: string;
+    status: SubscriptionStatus;
+    billingCycle?: BillingCycle;
+    trialEnd?: string;
+    couponCode: string | null;
+  };
+}
+
+// Where a subscription started from /checkout stands (the backend's record,
+// kept current by verify and Razorpay's webhooks). 404 if it isn't this
+// reader's.
+export function getSubscriptionCheckoutStatus(subscriptionId: string) {
+  return api.get<SubscriptionCheckoutStatusResponse>(
+    `/api/subscriptions/checkout/${encodeURIComponent(subscriptionId)}`,
+  );
 }

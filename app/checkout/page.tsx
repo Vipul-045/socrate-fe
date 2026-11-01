@@ -16,37 +16,36 @@ import {
   StatusPanel,
   SupportLine,
 } from "@/components/checkout/checkout-ui";
+import { CouponField } from "@/components/checkout/coupon-field";
+import { couponRefusal, useSubscriptionCoupon } from "@/hooks/use-subscription-coupon";
 import { ApiError } from "@/lib/Api";
 import { APP_URL, safeInternalPath } from "@/lib/navigation";
+import { failureFromCheckout, failureMessage, formatAmount, formatDate, periodLabel, planTagline } from "@/lib/payment";
+import type { BillingCycle } from "@/lib/pricing";
 import {
-  failureFromCheckout,
-  failureMessage,
-  formatAmount,
-  formatDate,
-  periodLabel,
-  planTagline,
-} from "@/lib/payment";
-import {
-  createRazorpayOrder,
+  createSubscription,
+  getSubscriptionCheckoutStatus,
+  getSubscriptionSummary,
   GetMemberPlans,
-  getOrderSummary,
-  getPaymentStatus,
   MemberPlan,
-  OrderSummaryResponse,
-  verifyRazorpayPayment,
+  SubscriptionStatus,
+  SubscriptionSummaryResponse,
+  verifySubscription,
 } from "@/lib/services";
 import type { RazorpayPaymentResponse } from "@/types/razorpay";
 import { cn } from "@/lib/utils";
 
-/* ─── /checkout?planId=…&returnTo=…&order=… ───
-   The browser names a plan; the backend prices it, creates (or hands back)
-   the Razorpay order, and alone decides whether it was paid. Once an order
-   exists its id joins the URL, so a refresh — or signing in again — picks
-   up where the payment stands instead of starting over.
+/* ─── /checkout?planId=…&cycle=…&returnTo=…&subscription=… ───
+   A subscription with a free trial: the browser picks a billing cycle (and
+   maybe a coupon); the backend creates the Razorpay subscription, and alone
+   decides when the trial has started. The reader authorises autopay in
+   Razorpay Checkout; nothing is charged until the trial ends. Once a
+   subscription exists its id joins the URL, so a refresh — or signing in
+   again — picks up where it stands instead of starting over.
 
-   Nothing here shows "paid" or "failed" on the browser's say-so alone:
+   Nothing here shows "started" or "failed" on the browser's say-so alone:
    success waits for the backend, and anything uncertain (a closed window, a
-   UPI request still out, a lost connection) is checked with the backend
+   UPI mandate still out, a lost connection) is checked with the backend
    until it settles or we say plainly that it's still being confirmed. */
 
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
@@ -74,46 +73,45 @@ function loadRazorpayScript(): Promise<boolean> {
   return razorpayScriptPromise;
 }
 
-// "Pro Monthly" -> { base: "Pro", cycle: "monthly" }. Plans that don't follow
-// this naming just get no cycle detected — the toggle only shows up when
-// there's actually another plan to switch to.
-function splitPlanName(name: string): { base: string; cycle: "monthly" | "yearly" | null } {
-  const match = name.match(/^(.*?)\s*[-–]?\s*(monthly|yearly|annual(?:ly)?)$/i);
-  if (!match) return { base: name.trim(), cycle: null };
-  const cycle = /monthly/i.test(match[2]) ? "monthly" : "yearly";
-  return { base: match[1].trim() || name.trim(), cycle };
-}
+const CYCLES: BillingCycle[] = ["monthly", "yearly"];
+const PERIOD: Record<BillingCycle, string> = { monthly: "month", yearly: "year" };
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The statuses in which the trial (or the paid plan after it) is running. */
+const GRANTED = new Set<SubscriptionStatus>(["trialing", "active"]);
+
+const isCycle = (value: string | null): value is BillingCycle => value === "monthly" || value === "yearly";
 
 type Phase =
   | { kind: "loading" }
   | { kind: "unavailable" }
   | { kind: "load-error"; network: boolean }
   | { kind: "already-active"; until: string | null }
-  /** The order summary and Pay button; `notice` explains a start that didn't work. */
+  /** The plan summary and Start button; `notice` explains a start that didn't work. */
   | { kind: "ready"; notice?: string }
-  /** Creating the order and loading Razorpay. */
+  /** Creating the subscription and loading Razorpay. */
   | { kind: "starting" }
   /** Razorpay's window is open. */
   | { kind: "open" }
   | { kind: "verifying"; after: Origin }
-  | { kind: "success" }
+  /** `trial`: a free trial began; otherwise the first charge was taken in Checkout. */
+  | { kind: "success"; trial: boolean; trialEnd: string | null; coupon: string | null }
   | { kind: "failed"; reason: string }
   | { kind: "cancelled" }
   /** Still not settled after waiting: never called a failure. */
   | { kind: "pending"; unverified: boolean }
-  | { kind: "expired" }
   | { kind: "session-expired" };
 
 /** What sent us to ask the backend: a success callback (verified or not), a closed window, or a reload. */
 type Origin = "payment" | "unverified" | "dismiss" | "resume";
 
-/* The phases in which nothing has been paid: a sign-out elsewhere simply
-   shows the sign-in prompt. After a payment starts we keep going — the
-   backend's 401 then says "sign in again", with the payment kept safe. */
+/* The phases in which nothing has been authorised: a sign-out elsewhere
+   simply shows the sign-in prompt. After that we keep going — the backend's
+   401 then says "sign in again", with the subscription kept safe. */
 const BEFORE_PAYMENT = new Set<Phase["kind"]>(["loading", "unavailable", "load-error", "already-active", "ready"]);
 
-/* About half a minute of asking, quickly at first. A UPI payment approved
-   in the app, or a webhook a little late, usually lands inside this. */
+/* About half a minute of asking, quickly at first. A UPI Autopay mandate
+   approved in the app, or a webhook a little late, usually lands inside this. */
 const POLL_DELAYS_MS = [0, 1500, 2000, 2500, 3000, 3000, 4000, 4000, 5000, 5000];
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,33 +149,54 @@ function useReturnPath(param: string | null) {
   return fromParam || fromReferrer || "/pricing";
 }
 
+/** The cycle to open on: ?cycle= if it's sold, else the one /pricing's planId names, else the first. */
+function initialCycle(summary: SubscriptionSummaryResponse, cycleParam: string | null, planId: string | null) {
+  if (isCycle(cycleParam) && summary.cycles[cycleParam]) return cycleParam;
+  const sold = CYCLES.filter((c) => summary.cycles[c]);
+  return sold.find((c) => planId && summary.cycles[c]?.planId === planId) ?? sold[0] ?? null;
+}
+
 function CheckoutPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const planId = searchParams.get("planId");
+  const cycleParam = searchParams.get("cycle");
   const returnParam = searchParams.get("returnTo");
-  const orderParam = searchParams.get("order");
+  const subscriptionParam = searchParams.get("subscription");
   const backHref = useReturnPath(returnParam);
 
   const { userInfo, isLoading: sessionLoading, refresh } = useUser();
   const signedIn = !!userInfo;
 
   const [plans, setPlans] = useState<MemberPlan[]>([]);
-  const [summary, setSummary] = useState<OrderSummaryResponse | null>(null);
+  const [summary, setSummary] = useState<SubscriptionSummaryResponse | null>(null);
+  const [cycle, setCycle] = useState<BillingCycle | null>(null);
+  /** When the summary was loaded: the trial's end is counted from it. */
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [reloadToken, setReloadToken] = useState(0);
 
-  /* Every step of a payment carries the run it belongs to. A newer run (Pay
-     again, a reload, leaving the page) quietly retires the older one, so a
-     late answer can never overwrite where the reader is now. */
+  const coupon = useSubscriptionCoupon(cycle ?? "monthly");
+
+  /* Every step carries the run it belongs to. A newer run (Start again, a
+     reload, leaving the page) quietly retires the older one, so a late
+     answer can never overwrite where the reader is now. */
   const run = useRef(0);
   const starting = useRef(false);
-  const orderId = useRef<string | null>(orderParam);
+  const subscriptionId = useRef<string | null>(subscriptionParam);
+  /** The coupon the running subscription was created with, for the success screen. */
+  const startedCoupon = useRef<string | null>(null);
   const loadedFor = useRef<string | null>(null);
+  // Read inside the load effect, which runs once per plan: the latest value
+  // without making the URL's cycle a reason to load again.
+  const cycleParamRef = useRef(cycleParam);
+  useEffect(() => {
+    cycleParamRef.current = cycleParam;
+  }, [cycleParam]);
 
   useEffect(() => () => void run.current++, []);
 
-  // The full plan list, for the features and a monthly/yearly switch.
+  // The full plan list, for the features.
   useEffect(() => {
     let cancelled = false;
     GetMemberPlans()
@@ -185,40 +204,34 @@ function CheckoutPageInner() {
         if (!cancelled) setPlans(res.data.PlanList);
       })
       .catch(() => {
-        // Non-fatal — the features list and cycle switcher just won't render.
+        // Non-fatal — the features list just won't render.
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const currentPlan = useMemo(() => plans.find((p) => p._id === planId) ?? null, [plans, planId]);
+  const selected = cycle ? summary?.cycles[cycle] ?? null : null;
+  const currentPlan = useMemo(() => plans.find((p) => p._id === selected?.planId) ?? null, [plans, selected]);
+  const soldCycles = summary ? CYCLES.filter((c) => summary.cycles[c]) : [];
 
-  // Sibling plans sharing the same base name (e.g. "Pro Monthly" / "Pro
-  // Yearly") but a different billing cycle — only rendered when there's
-  // actually more than one to choose from.
-  const cycleOptions = useMemo(() => {
-    if (!currentPlan) return [];
-    const { base } = splitPlanName(currentPlan.name);
-    const siblings = plans.filter((p) => {
-      if (p.price === 0) return false;
-      const split = splitPlanName(p.name);
-      return split.base.toLowerCase() === base.toLowerCase() && split.cycle !== null;
-    });
-    return siblings.length > 1 ? siblings : [];
-  }, [plans, currentPlan]);
-
-  /** This page's URL, with the order (or without one). */
+  /** This page's URL, with the subscription (or without one). */
   const checkoutUrl = useCallback(
-    (order: string | null, plan: string | null = planId) => {
+    (subscription: string | null, nextCycle: BillingCycle | null = cycle) => {
       const params = new URLSearchParams();
-      if (plan) params.set("planId", plan);
+      if (planId) params.set("planId", planId);
+      if (nextCycle) params.set("cycle", nextCycle);
       if (returnParam) params.set("returnTo", returnParam);
-      if (order) params.set("order", order);
+      if (subscription) params.set("subscription", subscription);
       return `/checkout?${params.toString()}`;
     },
-    [planId, returnParam],
+    [planId, returnParam, cycle],
   );
+
+  const forgetSubscription = useCallback(() => {
+    subscriptionId.current = null;
+    router.replace(checkoutUrl(null), { scroll: false });
+  }, [checkoutUrl, router]);
 
   /* The backend says the session is gone: tell the rest of the site too, or
      /login would see the stale sign-in and send the reader straight back. */
@@ -227,18 +240,20 @@ function CheckoutPageInner() {
     setPhase({ kind: "session-expired" });
   }, [refresh]);
 
-  const finishPaid = useCallback(
-    async (id: number) => {
-      // Pick up the new plan for the nav; the payment itself is already settled.
+  const finishStarted = useCallback(
+    async (id: number, status: SubscriptionStatus, trialEnd: string | null, couponCode: string | null) => {
+      // Pick up the new plan for the nav; the subscription itself has already started.
       await refresh({ quiet: true });
-      if (run.current === id) setPhase({ kind: "success" });
+      if (run.current === id) {
+        setPhase({ kind: "success", trial: status === "trialing", trialEnd, coupon: startedCoupon.current ?? couponCode });
+      }
     },
     [refresh],
   );
 
-  /** Ask the backend until the order settles, or say it's still being confirmed. */
+  /** Ask the backend until the trial has started, or say it's still being confirmed. */
   const settle = useCallback(
-    async (order: string, after: Origin) => {
+    async (subscription: string, after: Origin) => {
       const id = ++run.current;
       setPhase({ kind: "verifying", after });
 
@@ -248,56 +263,45 @@ function CheckoutPageInner() {
 
         let status;
         try {
-          status = (await getPaymentStatus(order)).order;
+          status = (await getSubscriptionCheckoutStatus(subscription)).subscription;
         } catch (err) {
           if (run.current !== id) return;
           if (err instanceof ApiError && err.status === 401) return sessionEnded();
           if (err instanceof ApiError && err.status === 404) {
-            // Not an order of this account (an old link, another account's URL).
-            orderId.current = null;
-            router.replace(checkoutUrl(null), { scroll: false });
+            // Not a subscription of this account (an old link, another account's URL).
+            forgetSubscription();
             return setPhase({ kind: "ready" });
           }
           continue; // the network or the backend: ask again
         }
         if (run.current !== id) return;
 
-        switch (status.status) {
-          case "paid":
-            return finishPaid(id);
-          case "failed":
-            // A failure inside this window would have come through
-            // payment.failed already; after a close, it's an earlier attempt's.
-            return setPhase(
-              status.failureReason === "cancelled" || after === "dismiss"
-                ? { kind: "cancelled" }
-                : { kind: "failed", reason: status.failureReason ?? "unknown" },
-            );
-          case "expired":
-            return setPhase({ kind: "expired" });
-          case "created":
-            // Nothing was paid: a closed window was a cancellation, a reload
-            // is simply the checkout again.
-            if (after === "dismiss") return setPhase({ kind: "cancelled" });
-            if (after === "resume") return setPhase({ kind: "ready" });
-            break;
-          // "processing" / "unknown": the bank or Razorpay hasn't answered yet.
+        if (GRANTED.has(status.status)) return finishStarted(id, status.status, status.trialEnd ?? null, status.couponCode);
+        if (status.status === "pending") {
+          // Nothing authorised: a closed window was a cancellation, a reload
+          // is simply the checkout again. After a success callback the
+          // webhook may still be on its way — keep asking.
+          if (after === "dismiss") return setPhase({ kind: "cancelled" });
+          if (after === "resume") return setPhase({ kind: "ready" });
+          continue;
         }
+        // Cancelled, halted, expired: this one is over. Nothing was charged for it.
+        forgetSubscription();
+        return setPhase({
+          kind: "ready",
+          notice: "That checkout can't be used any more. Start again — you haven't been charged.",
+        });
       }
       if (run.current === id) setPhase({ kind: "pending", unverified: after === "unverified" });
     },
-    [checkoutUrl, finishPaid, router, sessionEnded],
+    [finishStarted, forgetSubscription, sessionEnded],
   );
 
-  /* Load the price (and, after a reload, where the payment stands) once per
-     plan — not again when the session object changes under us. */
+  /* Load the prices (and, after a reload, where a subscription stands) once
+     per plan — not again when the session object changes under us. */
   useEffect(() => {
     if (sessionLoading || !signedIn) return;
-    if (!planId) {
-      setPhase({ kind: "unavailable" });
-      return;
-    }
-    const key = `${planId}:${reloadToken}`;
+    const key = `${planId ?? ""}:${reloadToken}`;
     if (loadedFor.current === key) return;
     loadedFor.current = key;
 
@@ -307,37 +311,35 @@ function CheckoutPageInner() {
 
     (async () => {
       try {
-        const resumeOrder = orderId.current;
+        const resume = subscriptionId.current;
         const [summaryResult, statusResult] = await Promise.allSettled([
-          getOrderSummary(planId),
-          resumeOrder ? getPaymentStatus(resumeOrder) : Promise.resolve(null),
+          getSubscriptionSummary(),
+          resume ? getSubscriptionCheckoutStatus(resume) : Promise.resolve(null),
         ]);
         if (run.current !== id) return;
 
-        if (summaryResult.status === "fulfilled") setSummary(summaryResult.value);
+        if (summaryResult.status === "fulfilled") {
+          setSummary(summaryResult.value);
+          setLoadedAt(Date.now());
+          setCycle(initialCycle(summaryResult.value, cycleParamRef.current, planId));
+        }
 
-        // An order in the URL: where that payment stands comes first.
-        if (resumeOrder) {
+        // A subscription in the URL: where it stands comes first.
+        if (resume) {
           if (statusResult.status === "fulfilled" && statusResult.value) {
-            const { status, failureReason } = statusResult.value.order;
-            if (status === "paid") return finishPaid(id);
-            if (status === "failed") {
-              return setPhase(
-                failureReason === "cancelled" ? { kind: "cancelled" } : { kind: "failed", reason: failureReason ?? "unknown" },
-              );
+            const { status, trialEnd, couponCode, billingCycle } = statusResult.value.subscription;
+            if (billingCycle && summaryResult.status === "fulfilled" && summaryResult.value.cycles[billingCycle]) {
+              setCycle(billingCycle);
             }
-            if (status === "expired") return setPhase({ kind: "expired" });
-            if (status === "processing" || status === "unknown") return void settle(resumeOrder, "resume");
-            // "created": nothing paid yet — show the checkout.
+            if (GRANTED.has(status)) return finishStarted(id, status, trialEnd ?? null, couponCode);
+            // "pending": nothing authorised yet — show the checkout. Anything
+            // else is over: start afresh.
+            if (status !== "pending") forgetSubscription();
           } else if (statusResult.status === "rejected") {
             const err = statusResult.reason;
             if (err instanceof ApiError && err.status === 401) return sessionEnded();
-            if (err instanceof ApiError && err.status === 404) {
-              orderId.current = null;
-              router.replace(checkoutUrl(null), { scroll: false });
-            } else {
-              return void settle(resumeOrder, "resume");
-            }
+            if (err instanceof ApiError && err.status === 404) forgetSubscription();
+            else return void settle(resume, "resume");
           }
         }
 
@@ -349,6 +351,8 @@ function CheckoutPageInner() {
         }
 
         const loaded = summaryResult.value;
+        // /pricing named a plan this checkout doesn't sell.
+        if (planId && !CYCLES.some((c) => loaded.cycles[c]?.planId === planId)) return setPhase({ kind: "unavailable" });
         if (loaded.alreadySubscribed) return setPhase({ kind: "already-active", until: loaded.activeUntil ?? null });
         setPhase({ kind: "ready" });
       } finally {
@@ -361,36 +365,43 @@ function CheckoutPageInner() {
     return () => {
       if (!finished) loadedFor.current = null;
     };
-  }, [sessionLoading, signedIn, planId, reloadToken, settle, finishPaid, checkoutUrl, router, sessionEnded]);
+  }, [sessionLoading, signedIn, planId, reloadToken, settle, finishStarted, forgetSubscription, sessionEnded]);
 
-  /** Razorpay's success callback: the backend checks the signature, or we ask where the order stands. */
-  const confirmPayment = useCallback(
-    async (order: string, response: RazorpayPaymentResponse) => {
+  /** Razorpay's success callback: the backend checks the signature, or we ask where the subscription stands. */
+  const confirmAuthorisation = useCallback(
+    async (subscription: string, response: RazorpayPaymentResponse) => {
       const id = ++run.current;
       setPhase({ kind: "verifying", after: "payment" });
       let after: Origin = "payment";
       try {
-        const verified = await verifyRazorpayPayment(response);
+        const verified = await verifySubscription(response);
         if (run.current !== id) return;
-        if (verified?.success) return finishPaid(id);
+        if (verified?.success && GRANTED.has(verified.status)) {
+          return finishStarted(id, verified.status, verified.trial_end ?? null, null);
+        }
       } catch (err) {
         if (run.current !== id) return;
         if (err instanceof ApiError && err.status === 401) return sessionEnded();
         if (errorCode(err) === "VERIFICATION_FAILED") after = "unverified";
       }
-      return settle(order, after);
+      return settle(subscription, after);
     },
-    [finishPaid, settle, sessionEnded],
+    [finishStarted, settle, sessionEnded],
   );
 
-  const startPayment = useCallback(async () => {
-    if (!planId || starting.current) return;
+  const { applied: appliedCoupon, checking: couponChecking, reject: rejectCoupon } = coupon;
+
+  const startTrial = useCallback(async () => {
+    if (!cycle || starting.current || couponChecking) return;
     starting.current = true;
     const id = ++run.current;
     setPhase({ kind: "starting" });
 
     try {
-      const [scriptLoaded, data] = await Promise.all([loadRazorpayScript(), createRazorpayOrder(planId)]);
+      const [scriptLoaded, data] = await Promise.all([
+        loadRazorpayScript(),
+        createSubscription(cycle, appliedCoupon?.code),
+      ]);
       if (run.current !== id) return;
 
       if (!scriptLoaded || !window.Razorpay) {
@@ -400,38 +411,39 @@ function CheckoutPageInner() {
             "We couldn't load the secure payment window. Check your connection — or pause any ad or content blocker — and try again.",
         });
       }
-      if (!data?.order?.id || !data.key_id) throw new Error("Incomplete order response");
+      if (!data?.subscription_id || !data.key_id) throw new Error("Incomplete subscription response");
 
-      const order = data.order.id;
-      orderId.current = order;
-      router.replace(checkoutUrl(order), { scroll: false });
+      const subscription = data.subscription_id;
+      subscriptionId.current = subscription;
+      startedCoupon.current = data.coupon_applied?.label ?? null;
+      router.replace(checkoutUrl(subscription), { scroll: false });
 
-      // Exactly one of: paid, failed, closed — whichever Checkout reports first.
+      // Exactly one of: authorised, failed, closed — whichever Checkout reports first.
       let settled = false;
-      const planName = summary?.plan.name ?? "Pro";
+      const planName = summary?.cycles[cycle]?.name ?? "Pro";
       const razorpay = new window.Razorpay({
         key: data.key_id,
-        order_id: order,
-        amount: data.order.amount,
-        currency: data.order.currency,
+        subscription_id: subscription,
         name: "Socrate",
-        description: `Socrate ${planName}`,
+        description: data.trial_end
+          ? `Socrate ${planName} — ${summary?.trialDays ?? 7}-day free trial`
+          : `Socrate ${planName}, ${cycle}`,
         prefill: { name: userInfo?.name, email: userInfo?.email },
-        notes: { planId },
+        notes: { billingCycle: cycle },
         theme: { color: "#1a1815" },
         // A failure comes back here, to explain it and offer a clean retry.
         retry: { enabled: false },
         handler: (response: RazorpayPaymentResponse) => {
           settled = true;
-          void confirmPayment(order, response);
+          void confirmAuthorisation(subscription, response);
         },
         modal: {
           ondismiss: () => {
             if (settled || run.current !== id) return;
             settled = true;
-            // Closing the window isn't proof nothing was paid (a UPI app may
-            // still approve it): ask before calling it cancelled.
-            void settle(order, "dismiss");
+            // Closing the window isn't proof nothing was authorised (a UPI
+            // app may still approve the mandate): ask before calling it cancelled.
+            void settle(subscription, "dismiss");
           },
         },
       });
@@ -445,22 +457,15 @@ function CheckoutPageInner() {
           // Already closing.
         }
         const outcome = failureFromCheckout(response?.error);
-        if (outcome === "pending" || outcome === "already_paid") return void settle(order, "payment");
+        if (outcome === "pending" || outcome === "already_paid") return void settle(subscription, "payment");
         setPhase(outcome === "cancelled" ? { kind: "cancelled" } : { kind: "failed", reason: outcome });
 
-        // A second opinion from the backend, in case the money moved after all.
+        // A second opinion from the backend, in case the mandate went through after all.
         const shown = run.current;
-        getPaymentStatus(order)
-          .then(({ order: status }) => {
+        getSubscriptionCheckoutStatus(subscription)
+          .then(({ subscription: status }) => {
             if (run.current !== shown) return;
-            if (status.status === "paid") void finishPaid(shown);
-            else if (status.status === "processing") void settle(order, "payment");
-            // Checkout doesn't say how the reader paid; the backend does. Only
-            // that detail is taken from it — its list may not have this
-            // attempt yet, and an older attempt's reason would mislead.
-            else if (outcome === "timed_out" && status.status === "failed" && status.failureReason === "upi_timeout") {
-              setPhase({ kind: "failed", reason: "upi_timeout" });
-            }
+            if (GRANTED.has(status.status)) void finishStarted(shown, status.status, status.trialEnd ?? null, status.couponCode);
           })
           .catch(() => {
             // The failure screen stands; "Try again" asks afresh.
@@ -472,10 +477,23 @@ function CheckoutPageInner() {
     } catch (err) {
       if (run.current !== id) return;
       if (err instanceof ApiError && err.status === 401) return sessionEnded();
+      // The coupon was refused when subscribing: say why at the field, and
+      // let the reader remove it or try another — never full price unasked.
+      const refusal = couponRefusal(err);
+      if (refusal) {
+        rejectCoupon(refusal);
+        return setPhase({ kind: "ready" });
+      }
       if (errorCode(err) === "ALREADY_SUBSCRIBED") {
         const session = await refresh({ quiet: true });
         if (run.current !== id) return;
-        return setPhase({ kind: "already-active", until: session.membership?.endDate ?? null });
+        const until =
+          ((err as ApiError).body as { activeUntil?: string | null } | null)?.activeUntil ??
+          session.membership?.endDate ??
+          session.membership?.currentPeriodEnd ??
+          session.membership?.trialEnd ??
+          null;
+        return setPhase({ kind: "already-active", until });
       }
       if (err instanceof ApiError && err.status === 404) return setPhase({ kind: "unavailable" });
       console.error("Couldn't start checkout:", err);
@@ -484,24 +502,50 @@ function CheckoutPageInner() {
         notice:
           err instanceof ApiError
             ? err.status === 429
-              ? "Too many attempts in a short time. Please wait a minute and try again."
-              : "We couldn't start the payment right now. Please try again in a moment."
+              ? "Too many attempts in a short time. Please wait a few minutes and try again."
+              : "We couldn't start your trial right now. Please try again in a moment."
             : "We couldn't reach Socrate. Check your connection and try again.",
       });
     } finally {
       starting.current = false;
     }
-  }, [planId, checkoutUrl, router, summary, userInfo, confirmPayment, settle, finishPaid, refresh, sessionEnded]);
+  }, [
+    cycle,
+    couponChecking,
+    appliedCoupon,
+    rejectCoupon,
+    checkoutUrl,
+    router,
+    summary,
+    userInfo,
+    confirmAuthorisation,
+    settle,
+    finishStarted,
+    refresh,
+    sessionEnded,
+  ]);
+
+  const chooseCycle = (next: BillingCycle) => {
+    if (next === cycle) return;
+    setCycle(next);
+    subscriptionId.current = null;
+    router.replace(checkoutUrl(null, next), { scroll: false });
+  };
 
   const retryLoad = () => {
-    orderId.current = null;
+    subscriptionId.current = null;
     router.replace(checkoutUrl(null), { scroll: false });
     setReloadToken((n) => n + 1);
   };
 
-  const signInHref = `/login?next=${encodeURIComponent(checkoutUrl(orderId.current))}`;
+  const signInHref = `/login?next=${encodeURIComponent(checkoutUrl(subscriptionParam))}`;
   const back = <PanelAction href={backHref}>{backLabel(backHref)}</PanelAction>;
-  const planName = summary?.plan.name ?? currentPlan?.name ?? "Pro";
+  const planName = selected?.name ?? currentPlan?.name ?? "Pro";
+  const trialDays = summary?.trialDays ?? 7;
+  // One free trial per account: a reader who has had theirs pays today.
+  const trial = summary?.trialEligible ?? true;
+  const price = selected ? formatAmount(selected.amount, selected.currency) : null;
+  const period = cycle ? PERIOD[cycle] : "month";
 
   /* ─── Signed out ─── */
   if (!sessionLoading && !signedIn && BEFORE_PAYMENT.has(phase.kind)) {
@@ -599,7 +643,7 @@ function CheckoutPageInner() {
           >
             <p>
               There&apos;s nothing to pay.{" "}
-              {until ? `${planName} is active until ${until}.` : `Your ${planName} features are ready to use.`}
+              {until ? `Your current ${planName} period runs to ${until}.` : `Your ${planName} features are ready to use.`}
             </p>
           </StatusPanel>
         </CheckoutColumn>
@@ -611,58 +655,102 @@ function CheckoutPageInner() {
         <CheckoutColumn>
           <StatusPanel
             tone="progress"
-            label={phase.after === "dismiss" ? "Checking" : "Verifying"}
-            title={phase.after === "dismiss" ? "Checking your payment…" : "We're verifying your payment…"}
+            label={phase.after === "dismiss" ? "Checking" : trial ? "Starting your trial" : "Confirming"}
+            title={
+              phase.after === "dismiss"
+                ? trial
+                  ? "Checking your autopay…"
+                  : "Checking your payment…"
+                : trial
+                  ? "Starting your free trial…"
+                  : "Confirming your payment…"
+            }
           >
             <p>This usually takes a few seconds. Please keep this page open.</p>
           </StatusPanel>
         </CheckoutColumn>
       );
 
-    case "success":
+    case "success": {
+      const firstCharge = formatDate(phase.trialEnd);
       return (
         <CheckoutColumn>
           <StatusPanel
             tone="success"
-            label="Payment successful"
-            title={`Your ${planName} plan is active.`}
+            label={phase.trial ? "Trial started" : "Subscribed"}
+            title={phase.trial ? "Your free trial has started." : `Your ${planName} plan is active.`}
             actions={
               <PanelAction primary onClick={() => window.location.assign(APP_URL)}>
                 Go to Socrate
               </PanelAction>
             }
             footnote={
-              summary ? (
-                <dl className="flex flex-col gap-2">
+              <dl className="flex flex-col gap-2">
+                <div className="flex justify-between gap-4">
+                  <dt>Plan</dt>
+                  <dd className="text-ink">
+                    Socrate {planName}
+                    {cycle ? `, ${cycle}` : ""}
+                  </dd>
+                </div>
+                {phase.trial && firstCharge ? (
                   <div className="flex justify-between gap-4">
-                    <dt>Plan</dt>
-                    <dd className="text-ink">Socrate {planName}</dd>
+                    <dt>First charge</dt>
+                    <dd className="text-ink">{firstCharge}</dd>
                   </div>
+                ) : null}
+                {price ? (
                   <div className="flex justify-between gap-4">
-                    <dt>Amount paid</dt>
+                    <dt>{phase.trial ? "Then" : "Billed"}</dt>
                     <dd className="tabular-nums text-ink">
-                      {formatAmount(summary.breakdown.totalAmount, summary.breakdown.currency)}
+                      {price}/{period}
                     </dd>
                   </div>
-                </dl>
-              ) : undefined
+                ) : null}
+                {phase.coupon ? (
+                  <div className="flex justify-between gap-4">
+                    <dt>Coupon</dt>
+                    <dd className="text-ink">{phase.coupon}</dd>
+                  </div>
+                ) : null}
+              </dl>
             }
           >
-            <p>Thanks for upgrading. Everything in Socrate {planName} is ready to use.</p>
+            {phase.trial ? (
+              <>
+                <p>Everything in Socrate {planName} is ready to use, free for {trialDays} days.</p>
+                <p>
+                  {firstCharge
+                    ? `Your first charge${price ? ` of ${price}` : ""} is on ${firstCharge}, then every ${period} until you cancel.`
+                    : `Your first charge is when the trial ends, then every ${period} until you cancel.`}{" "}
+                  Cancel before then and you won&apos;t be charged.
+                </p>
+                {phase.coupon ? <p>Your coupon discount is taken off when you&apos;re charged.</p> : null}
+              </>
+            ) : (
+              <>
+                <p>Thanks for subscribing. Everything in Socrate {planName} is ready to use.</p>
+                <p>
+                  It renews every {period} until you cancel. Cancel anytime and you keep {planName} until the end of the
+                  period you&apos;ve paid for.
+                </p>
+              </>
+            )}
           </StatusPanel>
         </CheckoutColumn>
       );
+    }
 
     case "failed":
       return (
         <CheckoutColumn>
           <StatusPanel
             tone="error"
-            label="Payment failed"
-            title="Your payment couldn't be completed."
+            label={trial ? "Autopay not set up" : "Payment failed"}
+            title={trial ? "We couldn't set up your autopay." : "Your payment couldn't be completed."}
             actions={
               <>
-                <PanelAction primary onClick={startPayment}>
+                <PanelAction primary onClick={startTrial}>
                   Try again
                 </PanelAction>
                 {back}
@@ -671,7 +759,7 @@ function CheckoutPageInner() {
             footnote={<SupportLine>If any amount was debited, it will be refunded automatically. Questions? Email</SupportLine>}
           >
             <p className="text-ink">{failureMessage(phase.reason)}</p>
-            <p>Your plan hasn&apos;t changed.</p>
+            <p>{trial ? "Your trial hasn't started, and your plan hasn't changed." : "Your plan hasn't changed."}</p>
           </StatusPanel>
         </CheckoutColumn>
       );
@@ -681,18 +769,21 @@ function CheckoutPageInner() {
         <CheckoutColumn>
           <StatusPanel
             tone="neutral"
-            label="Payment cancelled"
-            title="Payment cancelled"
+            label={trial ? "Trial not started" : "Payment cancelled"}
+            title={trial ? "Your trial hasn't started" : "Payment cancelled"}
             actions={
               <>
-                <PanelAction primary onClick={startPayment}>
+                <PanelAction primary onClick={startTrial}>
                   Try again
                 </PanelAction>
                 {back}
               </>
             }
           >
-            <p>The payment window was closed before the payment was completed. You haven&apos;t been charged, and your plan hasn&apos;t changed.</p>
+            <p>
+              The payment window was closed before {trial ? "autopay was set up" : "the payment was completed"}. You
+              haven&apos;t been charged, and your plan hasn&apos;t changed.
+            </p>
           </StatusPanel>
         </CheckoutColumn>
       );
@@ -703,46 +794,27 @@ function CheckoutPageInner() {
           <StatusPanel
             tone="waiting"
             label="Confirming"
-            title="We're still confirming your payment."
+            title={trial ? "We're still confirming your autopay." : "We're still confirming your payment."}
             actions={
               <>
                 <PanelAction
                   primary
-                  onClick={() => orderId.current && settle(orderId.current, phase.unverified ? "unverified" : "payment")}
+                  onClick={() =>
+                    subscriptionId.current && settle(subscriptionId.current, phase.unverified ? "unverified" : "payment")
+                  }
                 >
                   Check status
                 </PanelAction>
                 {back}
               </>
             }
-            footnote={<SupportLine>Charged, but still not on {planName} after 30 minutes? Email</SupportLine>}
+            footnote={<SupportLine>Set up autopay, but still not on {planName} after 30 minutes? Email</SupportLine>}
           >
             <p>
-              Some payments — especially UPI and net banking — take a few minutes to confirm. We&apos;ll activate{" "}
-              {planName} as soon as your bank confirms it, even if you leave this page.
+              Some payment methods — especially UPI Autopay — take a few minutes to confirm. Your{" "}
+              {trial ? "free trial starts" : "plan starts"} as soon as it&apos;s confirmed, even if you leave this page.
             </p>
-            <p>Please don&apos;t pay again: you won&apos;t be charged twice for this order.</p>
-          </StatusPanel>
-        </CheckoutColumn>
-      );
-
-    case "expired":
-      return (
-        <CheckoutColumn>
-          <StatusPanel
-            tone="waiting"
-            label="Checkout expired"
-            title="This checkout has expired"
-            actions={
-              <>
-                <PanelAction primary onClick={startPayment}>
-                  Start a new payment
-                </PanelAction>
-                {back}
-              </>
-            }
-          >
-            <p>Checkout sessions expire after a while to keep your payment safe. Start again — nothing was charged for the old one.</p>
+            <p>Please don&apos;t {trial ? "start another trial" : "pay again"} in the meantime.</p>
           </StatusPanel>
         </CheckoutColumn>
       );
@@ -761,7 +833,7 @@ function CheckoutPageInner() {
             }
           >
             <p>Your session ended, so we couldn&apos;t finish here.</p>
-            <p>If you completed a payment, it&apos;s safe — sign in and we&apos;ll show you where it stands.</p>
+            <p>If you set up autopay, your trial is safe — sign in and we&apos;ll show you where it stands.</p>
           </StatusPanel>
         </CheckoutColumn>
       );
@@ -771,7 +843,7 @@ function CheckoutPageInner() {
       break;
   }
 
-  if (!summary) {
+  if (!summary || !selected || !cycle || loadedAt === null) {
     return (
       <CheckoutColumn wide>
         <div className="flex min-h-[50vh] items-center justify-center text-small text-ink-soft" role="status">
@@ -783,13 +855,14 @@ function CheckoutPageInner() {
   }
 
   const busy = phase.kind === "starting" || phase.kind === "open";
-  const { breakdown } = summary;
-  const total = formatAmount(breakdown.totalAmount, breakdown.currency);
-  const period = periodLabel(summary.plan.durationDays);
-  const tagline = planTagline(summary.plan.name, summary.plan.description);
+  const recurring = formatAmount(selected.amount, selected.currency);
+  const firstChargeOn = formatDate(new Date(loadedAt + trialDays * DAY_MS));
+  const tagline = planTagline(selected.name, selected.description);
+  // Feature limits run per the plan's own period, whatever the billing cycle.
+  const featurePeriod = periodLabel(currentPlan?.durationDays ?? 30);
   const features = (currentPlan?.planFeatures ?? [])
     .filter((f) => f.enabled)
-    .map((f) => `${f.limit} ${f.featureKey.replace(/_/g, " ")} / ${period}`);
+    .map((f) => `${f.limit} ${f.featureKey.replace(/_/g, " ")} / ${featurePeriod}`);
 
   return (
     <CheckoutColumn wide>
@@ -799,7 +872,7 @@ function CheckoutPageInner() {
         <div className="min-w-0">
           <MonoLabel className="text-ink-soft">Checkout</MonoLabel>
           <h1 className="mt-3 text-[clamp(2rem,5vw,2.875rem)] font-medium leading-[1.05] tracking-[-0.035em] text-ink text-balance">
-            Upgrade to {summary.plan.name}
+            {trial ? `Try ${selected.name} free for ${trialDays} days` : `Subscribe to ${selected.name}`}
           </h1>
           {tagline ? (
             <p className="mt-4 max-w-[30rem] text-lede text-ink-soft text-pretty">{tagline}</p>
@@ -812,30 +885,26 @@ function CheckoutPageInner() {
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="order-summary-title" className="text-title font-medium text-ink">
-              {summary.plan.name}
+              {selected.name}
             </h2>
-            {cycleOptions.length > 0 && (
+            {soldCycles.length > 1 && (
               <div className="inline-flex rounded-lg border border-line-control p-0.5 text-xs" role="radiogroup" aria-label="Billing period">
-                {cycleOptions.map((p) => {
-                  const { cycle } = splitPlanName(p.name);
-                  const active = p._id === planId;
+                {soldCycles.map((c) => {
+                  const active = c === cycle;
                   return (
                     <button
-                      key={p._id}
+                      key={c}
                       type="button"
                       role="radio"
                       aria-checked={active}
                       disabled={busy}
-                      onClick={() => {
-                        orderId.current = null;
-                        router.push(checkoutUrl(null, p._id));
-                      }}
+                      onClick={() => chooseCycle(c)}
                       className={cn(
                         "min-h-9 rounded-md px-3 capitalize transition-colors",
                         active ? "bg-ink text-[#faf9f6]" : "text-ink-soft hover:text-ink",
                       )}
                     >
-                      {cycle}
+                      {c}
                     </button>
                   );
                 })}
@@ -844,24 +913,54 @@ function CheckoutPageInner() {
           </div>
           <p className="mt-1.5 flex items-baseline gap-1.5">
             <span className="text-[1.875rem] font-medium leading-none tracking-[-0.035em] text-ink tabular-nums">
-              {formatAmount(breakdown.baseAmount, breakdown.currency)}
+              {recurring}
             </span>
-            <span className="text-small text-ink-soft">/{period}</span>
+            <span className="text-small text-ink-soft">/{period}{trial ? " after your trial" : ""}</span>
           </p>
 
-          {/* The plan's price is the total: taxes are included, nothing is added. */}
           <dl className="mt-6 flex flex-col gap-3 border-t border-line pt-5 text-[14.5px]">
-            <div className="flex justify-between gap-4">
-              <dt className="text-ink-soft">Plan price</dt>
-              <dd className="tabular-nums text-ink">{formatAmount(breakdown.baseAmount, breakdown.currency)}</dd>
-            </div>
+            {trial ? (
+              <>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-soft">Free trial</dt>
+                  <dd className="text-ink">{trialDays} days</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-ink-soft">Then, from {firstChargeOn ?? "the end of your trial"}</dt>
+                  <dd className="shrink-0 tabular-nums text-ink">
+                    {recurring}/{period}
+                  </dd>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink-soft">Billed {cycle}</dt>
+                <dd className="shrink-0 tabular-nums text-ink">
+                  {recurring}/{period}
+                </dd>
+              </div>
+            )}
           </dl>
 
           <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-line pt-5">
-            <span className="font-medium text-ink">Total due today</span>
-            <span className="text-[1.375rem] font-medium tracking-[-0.02em] text-ink tabular-nums">{total}</span>
+            <span className="font-medium text-ink">Due today</span>
+            <span className="text-[1.375rem] font-medium tracking-[-0.02em] text-ink tabular-nums">
+              {trial ? formatAmount(0, selected.currency) : recurring}
+            </span>
           </div>
-          <p className="mt-1.5 text-right text-[13px] text-ink-muted">Inclusive of all taxes</p>
+          {!trial && appliedCoupon ? (
+            <p className="mt-1.5 text-right text-[13px] text-ink-muted">
+              Before your {appliedCoupon.label} — Razorpay shows the final amount
+            </p>
+          ) : null}
+          <p className="mt-1.5 text-right text-[13px] text-ink-muted">Renews automatically · Cancel anytime</p>
+
+          <div className="mt-5 border-t border-line pt-4">
+            <CouponField coupon={coupon} disabled={busy} />
+            {appliedCoupon && trial ? (
+              <p className="mt-2 text-[13px] leading-[1.5] text-ink-muted">Your discount is taken off when you&apos;re charged.</p>
+            ) : null}
+          </div>
 
           {phase.kind === "ready" && phase.notice ? (
             <p
@@ -873,18 +972,22 @@ function CheckoutPageInner() {
           ) : null}
 
           <Button
-            onClick={startPayment}
-            disabled={busy}
+            onClick={startTrial}
+            disabled={busy || couponChecking}
             aria-busy={busy || undefined}
             className="mt-6 h-12 w-full rounded-lg text-[15px] tracking-[-0.008em]"
           >
             {busy ? (
               <>
                 <Loader2 className="animate-spin" aria-hidden />
-                {phase.kind === "open" ? "Waiting for payment…" : "Starting secure checkout…"}
+                {phase.kind === "open" ? (trial ? "Waiting for autopay…" : "Waiting for payment…") : "Starting secure checkout…"}
               </>
+            ) : trial ? (
+              "Start free trial"
+            ) : appliedCoupon ? (
+              "Continue to payment"
             ) : (
-              `Pay ${total}`
+              `Pay ${recurring}`
             )}
           </Button>
 
@@ -896,7 +999,7 @@ function CheckoutPageInner() {
         <div className="min-w-0 lg:col-start-1 lg:row-start-2">
           {features.length > 0 ? (
             <>
-              <MonoLabel className="text-ink-soft">Included in {summary.plan.name}</MonoLabel>
+              <MonoLabel className="text-ink-soft">Included in {selected.name}</MonoLabel>
               <ul className="mt-4 flex flex-col gap-3">
                 {features.map((feature) => (
                   <li
@@ -910,8 +1013,20 @@ function CheckoutPageInner() {
             </>
           ) : null}
           <p className={cn("max-w-[30rem] text-[14px] leading-[1.65] text-ink-muted", features.length > 0 && "mt-8 border-t border-line pt-5")}>
-            One-time payment. {summary.plan.name} stays active for {summary.plan.durationDays} days and doesn&apos;t renew
-            automatically. By paying you agree to our{" "}
+            {trial ? (
+              <>
+                Free for {trialDays} days, then {recurring} every {period} until you cancel — your plan renews
+                automatically. Cancel anytime{firstChargeOn ? ` before ${firstChargeOn}` : " during your trial"} and you
+                won&apos;t be charged. To set up autopay your bank may place a small verification charge, which is
+                refunded. By starting your trial you agree to our{" "}
+              </>
+            ) : (
+              <>
+                {recurring} today, then every {period} until you cancel — your plan renews automatically. Cancel anytime
+                and you keep {selected.name} until the end of the period you&apos;ve paid for. You&apos;ve already had
+                the free trial on this account. By subscribing you agree to our{" "}
+              </>
+            )}
             <Link href="/terms" className="underline decoration-[#d4cfc4] underline-offset-[3px] hover:text-ink">
               Terms
             </Link>{" "}

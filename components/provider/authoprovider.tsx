@@ -36,12 +36,22 @@ export interface PlanInfo {
 
 export interface MembershipInfo {
   membershipId: string;
-  status: "active" | "cancelled" | "expired" | "trial" | "pending";
+  status: "active" | "cancelled" | "expired" | "trial" | "pending" | "trialing" | "past_due" | "halted";
   tokenLimit: number;
   tokensUsed: number;
   tokensRemaining: number;
   startDate: string;
+  /** Paid orders only: a subscription runs until it's cancelled. */
   endDate?: string;
+  /** Subscriptions: when the free trial ends and the first charge is taken. */
+  trialEnd?: string;
+  /** Subscriptions: when the current paid period ends (the next renewal). */
+  currentPeriodEnd?: string;
+  billingCycle?: "monthly" | "yearly";
+  /** A subscription (it can be cancelled), not a one-time order. */
+  isSubscription?: boolean;
+  /** Cancelled with its paid period still running: the plan until endDate, then it won't renew. */
+  cancelAtPeriodEnd?: boolean;
   isAutoRenew: boolean;
   plan: PlanInfo | null;
 }
@@ -49,8 +59,13 @@ export interface MembershipInfo {
 /** "pro" while a paid plan is running; "free" otherwise (including no plan yet). */
 export type PlanTier = "free" | "pro";
 
+/** The statuses that give the plan: paid (order or subscription), a
+ *  subscription's free trial, or a renewal Razorpay is retrying (a grace
+ *  period). The backend's ACCESS_STATUSES. */
+const ACCESS_STATUSES: ReadonlySet<MembershipInfo["status"]> = new Set(["active", "trialing", "past_due"]);
+
 export function tierOf(membership: MembershipInfo | null): PlanTier {
-  if (!membership || membership.status !== "active" || !membership.plan) return "free";
+  if (!membership || !ACCESS_STATUSES.has(membership.status) || !membership.plan) return "free";
   if (membership.endDate && new Date(membership.endDate).getTime() <= Date.now()) return "free";
   return membership.plan.price > 0 ? "pro" : "free";
 }
