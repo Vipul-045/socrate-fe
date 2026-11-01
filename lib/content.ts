@@ -308,7 +308,7 @@ export const FAQS: readonly FaqItem[] = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes, from Settings → Plan & billing in the app — no email required. Cancel during your free trial and you're never charged. Cancel a paid plan and you keep Pro until the end of the period you've paid for; it just won't renew.",
+    a: "Yes, from Settings → Plan & billing in the app — no email required. Cancel during your free trial and you're never charged. Cancel a paid plan and you keep Pro until the end of the period you've paid for; it just won't renew. If you've had a trial before and cancel within 48 hours of your first payment, we refund that payment in full.",
   },
   {
     q: "What if a payment fails?",
@@ -336,8 +336,8 @@ export const FAQS: readonly FaqItem[] = [
 export const CONTACT_CHANNELS = [
   {
     label: "Email",
-    value: "socratedotin@gmail.com",
-    href: "mailto:socratedotin@gmail.com",
+    value: "support@socrate.in",
+    href: "mailto:support@socrate.in",
     description:
       "Account help, billing, uploads that won't process, and data export or deletion.",
   },

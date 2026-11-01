@@ -731,8 +731,8 @@ function CheckoutPageInner() {
               <>
                 <p>Thanks for subscribing. Everything in Socrate {planName} is ready to use.</p>
                 <p>
-                  It renews every {period} until you cancel. Cancel anytime and you keep {planName} until the end of the
-                  period you&apos;ve paid for.
+                  It renews every {period} until you cancel. Changed your mind? Cancel within 48 hours from Settings →
+                  Plan &amp; billing in the app for a full refund.
                 </p>
               </>
             )}
@@ -1022,9 +1022,10 @@ function CheckoutPageInner() {
               </>
             ) : (
               <>
-                {recurring} today, then every {period} until you cancel — your plan renews automatically. Cancel anytime
-                and you keep {selected.name} until the end of the period you&apos;ve paid for. You&apos;ve already had
-                the free trial on this account. By subscribing you agree to our{" "}
+                {recurring} today, then every {period} until you cancel — your plan renews automatically. Cancel within
+                48 hours of this payment for a full refund; after that, cancelling keeps {selected.name} until the end of
+                the period you&apos;ve paid for. You&apos;ve already had the free trial on this account. By subscribing
+                you agree to our{" "}
               </>
             )}
             <Link href="/terms" className="underline decoration-[#d4cfc4] underline-offset-[3px] hover:text-ink">
