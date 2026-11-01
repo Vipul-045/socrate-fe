@@ -193,12 +193,16 @@ export function Navbar() {
                             </span>
                             <span
                               className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                membership.status === "active"
+                                membership.status === "active" || membership.status === "trialing"
                                   ? "bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400"
                                   : "bg-yellow-50 text-yellow-600 dark:bg-yellow-950/40 dark:text-yellow-400"
                               }`}
                             >
-                              {membership.status}
+                              {membership.status === "trialing"
+                                ? "free trial"
+                                : membership.status === "past_due"
+                                  ? "payment failed"
+                                  : membership.status}
                             </span>
                           </div>
 
@@ -221,14 +225,22 @@ export function Navbar() {
                             />
                           </div>
 
-                          {membership.endDate && (
-                            <p className="text-[10px] mt-1.5 text-muted-foreground">
-                              Renews{" "}
-                              {new Date(
-                                membership.endDate,
-                              ).toLocaleDateString()}
-                            </p>
-                          )}
+                          {(() => {
+                            /* A paid order ends on endDate; a subscription
+                               renews — or, cancelled, runs out on endDate. */
+                            const day = (iso: string) => new Date(iso).toLocaleDateString();
+                            const line =
+                              membership.cancelAtPeriodEnd && membership.endDate
+                                ? `${membership.plan.name} until ${day(membership.endDate)}, won't renew`
+                                : membership.status === "trialing" && membership.trialEnd
+                                  ? `Trial ends ${day(membership.trialEnd)}`
+                                  : membership.isSubscription
+                                    ? membership.currentPeriodEnd && `Renews ${day(membership.currentPeriodEnd)}`
+                                    : membership.endDate && `Until ${day(membership.endDate)}`;
+                            return line ? (
+                              <p className="text-[10px] mt-1.5 text-muted-foreground">{line}</p>
+                            ) : null;
+                          })()}
                         </>
                       ) : (
                         <div className="flex items-center justify-between">

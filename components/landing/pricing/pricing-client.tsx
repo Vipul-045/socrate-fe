@@ -322,8 +322,10 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
         )}
 
         <p className="mt-[clamp(1.75rem,3vw,2.25rem)] border-t border-[#eae6de] pt-5 text-xs leading-relaxed text-ink-muted">
-          Prices shown in your local currency. Payments are secured by Razorpay,
-          and paid plans don&apos;t renew automatically.
+          Prices shown in your local currency. Payments are secured by Razorpay.
+          Pro starts with a 7-day free trial for first-time subscribers, then
+          renews automatically until you cancel — anytime, from Settings → Plan
+          &amp; billing.
         </p>
       </Container>
     </Section>
