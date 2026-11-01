@@ -1,6 +1,7 @@
 // lib/services.ts
 
 import { api } from "./Api";
+import type { BillingCycle } from "./pricing";
 import type { RazorpayPaymentResponse } from "@/types/razorpay";
 
 export interface PlanFeature {
@@ -127,4 +128,46 @@ export interface OrderStatusResponse {
 // with Razorpay itself, and a payment found there is granted on the spot.
 export function getPaymentStatus(orderId: string) {
   return api.get<OrderStatusResponse>(`/Payment/order/${encodeURIComponent(orderId)}`);
+}
+
+/* ─── Subscriptions (recurring billing, 7-day free trial) ─── */
+
+export interface AppliedCoupon {
+  /** Normalised by the backend, e.g. "EARLYBIRD". */
+  code: string;
+  /** What the reader sees, e.g. "Early Bird Discount". */
+  label: string;
+}
+
+export interface ValidateCouponResponse extends AppliedCoupon {
+  success: true;
+  valid: true;
+}
+
+// Only the code is sent: the backend maps it to a Razorpay offer and says
+// whether it applies to this billing cycle. A code that doesn't is a 400
+// COUPON_INVALID with a message written for the reader.
+export function validateSubscriptionCoupon(couponCode: string, billingCycle: BillingCycle) {
+  return api.post<ValidateCouponResponse>("/api/subscriptions/coupon/validate", { couponCode, billingCycle });
+}
+
+export interface CreateSubscriptionResponse {
+  success: boolean;
+  subscription_id: string;
+  key_id: string;
+  trial_end: string;
+  /** Only when a coupon was applied. */
+  coupon_applied?: AppliedCoupon;
+}
+
+// Starts the trial and returns the subscription_id Razorpay Checkout opens
+// with. couponCode is left out entirely when none is applied. A code the
+// backend (or Razorpay) refuses is a 400 COUPON_INVALID, never a
+// subscription at full price: see couponRefusal() in
+// hooks/use-subscription-coupon.ts.
+export function createSubscription(billingCycle: BillingCycle, couponCode?: string | null) {
+  return api.post<CreateSubscriptionResponse>("/api/subscriptions/create", {
+    billingCycle,
+    ...(couponCode ? { couponCode } : {}),
+  });
 }

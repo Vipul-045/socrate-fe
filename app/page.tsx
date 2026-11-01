@@ -31,9 +31,9 @@ export default function HomePage() {
       <JsonLd data={homeJsonLd()} />
       <Hero />
       <DemoVideo
-        src="/videos/Socrate-Product-Demo.mp4"
+        src="/videos/brag.mp4"
         poster={demoPoster}
-        duration={50}
+        duration={57.6}
       />
       <Showcase />
       <HowItWorks />
