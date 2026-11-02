@@ -18,7 +18,11 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]']);
    into the bundle when it's built: http://localhost:4100 in
    .env.development.local, https://app.socrate.in in production. Without it,
    or with a production build pointing at this machine, readers would be sent
-   somewhere that isn't the app — so neither starts. */
+   somewhere that isn't the app — so neither starts.
+
+   It has no NEXT_PUBLIC_ prefix, so Next wouldn't put it into browser code
+   by itself: the buttons that call window.location.assign(APP_URL) would go
+   to /undefined. `env` below puts it there, server and browser alike. */
 function checkAppUrl(phase: string) {
   if (phase !== PHASE_DEVELOPMENT_SERVER && phase !== PHASE_PRODUCTION_BUILD) return;
 
@@ -41,5 +45,5 @@ function checkAppUrl(phase: string) {
 
 export default function config(phase: string): NextConfig {
   checkAppUrl(phase);
-  return nextConfig;
+  return { ...nextConfig, env: { SOCRATE_APP_URL: process.env.SOCRATE_APP_URL } };
 }

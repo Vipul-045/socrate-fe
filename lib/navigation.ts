@@ -9,7 +9,8 @@
  * lib/auth-api.ts). Every link into the app uses this, and it comes from
  * SOCRATE_APP_URL alone: next.config.ts won't start without it, or build
  * for production with a localhost one, so there's no fallback here to quietly
- * send one environment's readers to another's app.
+ * send one environment's readers to another's app. next.config.ts's `env`
+ * fixes it into browser code at build time; read it here, nowhere else.
  */
 export const APP_URL = process.env.SOCRATE_APP_URL as string;
 
