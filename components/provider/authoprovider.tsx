@@ -79,6 +79,9 @@ export interface SessionSnapshot {
 
 interface UserContextValue extends SessionSnapshot {
   isLoading: boolean;
+  /** The last session check got no answer (the backend down or unreachable):
+   *  signed-in or not is unknown — not the same as signed out. */
+  isUnreachable: boolean;
   /** Re-fetch user + membership from the backend, and return what it said.
    *  `quiet`: no loading state, and a backend that can't be reached leaves
    *  the session as it was instead of signing the reader out. */
@@ -98,6 +101,7 @@ const UserContext = createContext<UserContextValue | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<SessionSnapshot>(SIGNED_OUT);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUnreachable, setIsUnreachable] = useState(false);
   const lastCheck = useRef(0);
   const current = useRef<SessionSnapshot>(SIGNED_OUT);
   const setSession = useCallback((next: SessionSnapshot) => {
@@ -115,10 +119,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const next: SessionSnapshot = data?.user
         ? { userInfo: data.user, membership: data.membership ?? null, tier: tierOf(data.membership ?? null) }
         : SIGNED_OUT;
+      setIsUnreachable(false);
       setSession(next);
       return next;
     } catch (err) {
       if (quiet && !(err instanceof ApiError && err.status === 401)) return current.current;
+      // No answer, or the backend failing: unknown, not "signed out".
+      setIsUnreachable(!(err instanceof ApiError) || err.status >= 500);
       setSession(SIGNED_OUT);
       return SIGNED_OUT;
     }
@@ -161,7 +168,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [probe]);
 
   return (
-    <UserContext.Provider value={{ ...session, isLoading, refresh, logout }}>
+    <UserContext.Provider value={{ ...session, isLoading, isUnreachable, refresh, logout }}>
       {children}
     </UserContext.Provider>
   );

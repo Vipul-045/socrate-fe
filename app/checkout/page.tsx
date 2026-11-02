@@ -119,6 +119,15 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const errorCode = (err: unknown) =>
   err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKENDBASEURL || "http://localhost:3000";
+
+/* In development, why checkout couldn't show the plan, in the console: the
+   screens a reader sees don't say, and more than one cause looks alike. */
+function explainInDev(reason: string, detail?: unknown) {
+  if (process.env.NODE_ENV === "production") return;
+  console.warn(`[checkout] ${reason}`, ...(detail === undefined ? [] : [detail]));
+}
+
 function backLabel(path: string) {
   const pathname = path.split(/[?#]/)[0];
   if (pathname === "/pricing") return "Back to pricing";
@@ -165,8 +174,14 @@ function CheckoutPageInner() {
   const subscriptionParam = searchParams.get("subscription");
   const backHref = useReturnPath(returnParam);
 
-  const { userInfo, isLoading: sessionLoading, refresh } = useUser();
+  const { userInfo, isLoading: sessionLoading, isUnreachable: sessionUnreachable, refresh } = useUser();
   const signedIn = !!userInfo;
+
+  // Nothing named — no plan, cycle or subscription: choosing one is pricing's job.
+  const nothingNamed = !planId && !cycleParam && !subscriptionParam;
+  useEffect(() => {
+    if (nothingNamed) router.replace("/pricing");
+  }, [nothingNamed, router]);
 
   const [plans, setPlans] = useState<MemberPlan[]>([]);
   const [summary, setSummary] = useState<SubscriptionSummaryResponse | null>(null);
@@ -345,14 +360,37 @@ function CheckoutPageInner() {
 
         if (summaryResult.status === "rejected") {
           const err = summaryResult.reason;
-          if (err instanceof ApiError && err.status === 404) return setPhase({ kind: "unavailable" });
           if (err instanceof ApiError && err.status === 401) return sessionEnded();
+          // Only the backend's own PLAN_NOT_FOUND means there's no plan to sell.
+          // Any other 404 is a backend without this route — not the plan's fault.
+          if (err instanceof ApiError && err.status === 404 && errorCode(err) === "PLAN_NOT_FOUND") {
+            explainInDev(
+              "Plan unavailable: GET /api/subscriptions/summary says no billing cycle can be sold — no RAZORPAY_PLAN_ID_PRO_IN_* is linked to an active MembershipPlan (backend: npm run set:pro-plan-razorpay).",
+              err.body,
+            );
+            return setPhase({ kind: "unavailable" });
+          }
+          explainInDev(
+            err instanceof ApiError
+              ? `Checkout couldn't load: GET ${BACKEND_URL}/api/subscriptions/summary answered ${err.status}` +
+                  (err.status === 404
+                    ? " with no PLAN_NOT_FOUND — that backend has no such route: an older deploy, or NEXT_PUBLIC_BACKENDBASEURL pointing at the wrong backend."
+                    : ".")
+              : `Checkout couldn't load: ${BACKEND_URL} couldn't be reached.`,
+            err instanceof ApiError ? err.body : err,
+          );
           return setPhase({ kind: "load-error", network: !(err instanceof ApiError) });
         }
 
         const loaded = summaryResult.value;
         // /pricing named a plan this checkout doesn't sell.
-        if (planId && !CYCLES.some((c) => loaded.cycles[c]?.planId === planId)) return setPhase({ kind: "unavailable" });
+        if (planId && !CYCLES.some((c) => loaded.cycles[c]?.planId === planId)) {
+          explainInDev(
+            `Plan unavailable: planId ${planId} in the URL isn't the MembershipPlan of any billing cycle the backend sells (GET /api/subscriptions/summary cycles below).`,
+            loaded.cycles,
+          );
+          return setPhase({ kind: "unavailable" });
+        }
         if (loaded.alreadySubscribed) return setPhase({ kind: "already-active", until: loaded.activeUntil ?? null });
         setPhase({ kind: "ready" });
       } finally {
@@ -495,7 +533,10 @@ function CheckoutPageInner() {
           null;
         return setPhase({ kind: "already-active", until });
       }
-      if (err instanceof ApiError && err.status === 404) return setPhase({ kind: "unavailable" });
+      if (err instanceof ApiError && err.status === 404) {
+        explainInDev(`Plan unavailable: POST ${BACKEND_URL}/api/subscriptions/create answered 404.`, err.body);
+        return setPhase({ kind: "unavailable" });
+      }
       console.error("Couldn't start checkout:", err);
       setPhase({
         kind: "ready",
@@ -536,6 +577,8 @@ function CheckoutPageInner() {
     subscriptionId.current = null;
     router.replace(checkoutUrl(null), { scroll: false });
     setReloadToken((n) => n + 1);
+    // The session check couldn't reach the backend either: ask again.
+    if (sessionUnreachable) void refresh();
   };
 
   const signInHref = `/login?next=${encodeURIComponent(checkoutUrl(subscriptionParam))}`;
@@ -546,6 +589,41 @@ function CheckoutPageInner() {
   const trial = summary?.trialEligible ?? true;
   const price = selected ? formatAmount(selected.amount, selected.currency) : null;
   const period = cycle ? PERIOD[cycle] : "month";
+
+  if (nothingNamed) {
+    return (
+      <CheckoutColumn wide>
+        <div className="flex min-h-[50vh] items-center justify-center text-small text-ink-soft" role="status">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          Taking you to our plans…
+        </div>
+      </CheckoutColumn>
+    );
+  }
+
+  /* ─── The session couldn't be checked: unknown, not signed out ─── */
+  if (!sessionLoading && !signedIn && sessionUnreachable && BEFORE_PAYMENT.has(phase.kind)) {
+    return (
+      <CheckoutColumn>
+        <StatusPanel
+          tone="neutral"
+          label="Checkout unavailable"
+          title="We couldn't load checkout"
+          actions={
+            <>
+              <PanelAction primary onClick={retryLoad}>
+                Try again
+              </PanelAction>
+              {back}
+            </>
+          }
+        >
+          <p>We couldn&apos;t reach Socrate. Check your connection and try again.</p>
+          <p>You haven&apos;t been charged.</p>
+        </StatusPanel>
+      </CheckoutColumn>
+    );
+  }
 
   /* ─── Signed out ─── */
   if (!sessionLoading && !signedIn && BEFORE_PAYMENT.has(phase.kind)) {
