@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]']);
 
-/* Every link into the app is NEXT_PUBLIC_APP_URL (lib/navigation.ts), fixed
+/* Every link into the app is SOCRATE_APP_URL (lib/navigation.ts), fixed
    into the bundle when it's built: http://localhost:4100 in
    .env.development.local, https://app.socrate.in in production. Without it,
    or with a production build pointing at this machine, readers would be sent
@@ -22,19 +22,19 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]']);
 function checkAppUrl(phase: string) {
   if (phase !== PHASE_DEVELOPMENT_SERVER && phase !== PHASE_PRODUCTION_BUILD) return;
 
-  const raw = process.env.NEXT_PUBLIC_APP_URL;
+  const raw = process.env.SOCRATE_APP_URL;
   let url: URL | null = null;
   try {
     url = new URL(raw ?? '');
   } catch {}
   if (!url || (url.protocol !== 'https:' && url.protocol !== 'http:')) {
     throw new Error(
-      `NEXT_PUBLIC_APP_URL must be the Socrate app's full URL, e.g. https://app.socrate.in (see .env.example); it is ${JSON.stringify(raw ?? null)}.`,
+      `SOCRATE_APP_URL must be the Socrate app's full URL, e.g. https://app.socrate.in (see .env.example); it is ${JSON.stringify(raw ?? null)}.`,
     );
   }
   if (phase === PHASE_PRODUCTION_BUILD && LOCAL_HOSTS.has(url.hostname)) {
     throw new Error(
-      `NEXT_PUBLIC_APP_URL is ${raw} in a production build. Set it to https://app.socrate.in where this is built (on Vercel: Settings → Environment Variables), then build again.`,
+      `SOCRATE_APP_URL is ${raw} in a production build. Set it to https://app.socrate.in where this is built (on Vercel: Settings → Environment Variables), then build again.`,
     );
   }
 }
