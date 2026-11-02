@@ -336,8 +336,8 @@ export const FAQS: readonly FaqItem[] = [
 export const CONTACT_CHANNELS = [
   {
     label: "Email",
-    value: "support@socrate.in",
-    href: "mailto:support@socrate.in",
+    value: "socratedotin@gmail.com",
+    href: "mailto:socratedotin@gmail.com",
     description:
       "Account help, billing, uploads that won't process, and data export or deletion.",
   },

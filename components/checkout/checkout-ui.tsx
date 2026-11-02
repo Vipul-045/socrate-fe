@@ -179,7 +179,7 @@ export function PanelAction({
   );
 }
 
-export const supportEmail = "support@socrate.in";
+export const supportEmail = "socratedotin@gmail.com";
 
 export function SupportLine({ children }: { children: React.ReactNode }) {
   return (
