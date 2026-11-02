@@ -13,7 +13,7 @@ import { faqJsonLd, pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata({
   title: "Frequently Asked Questions",
   description:
-    "Answers about Socrate: supported file types, how accurate the AI is, privacy, mobile use, note exports, plans, cancelling and student discounts.",
+    "Answers about Socrate: supported file types, how accurate the AI is, privacy, mobile use, note exports, the free trial, billing, cancelling, coupons and student discounts.",
   path: "/faq",
 });
 

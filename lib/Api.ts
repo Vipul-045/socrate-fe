@@ -19,14 +19,30 @@ class ApiError extends Error {
 }
 
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    credentials: "include", // sends/receives cookies automatically
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${endpoint}`, {
+      credentials: "include", // sends/receives cookies automatically
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+      ...options,
+    });
+  } catch (err) {
+    /* No response at all (a TypeError: "Failed to fetch"): the backend isn't
+       running or can't be reached, or the browser refused it (CORS). Callers
+       tell this apart from an ApiError and show a retry; in development the
+       console says where it was looking. */
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `[api] ${options.method ?? "GET"} ${BASE_URL}${endpoint} got no response. Is the backend running at ${BASE_URL}? ` +
+          "(backend: npm run dev; the URL is NEXT_PUBLIC_BACKENDBASEURL)",
+        err,
+      );
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     let errorBody: unknown = null;

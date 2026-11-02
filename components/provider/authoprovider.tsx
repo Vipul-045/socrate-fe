@@ -36,12 +36,22 @@ export interface PlanInfo {
 
 export interface MembershipInfo {
   membershipId: string;
-  status: "active" | "cancelled" | "expired" | "trial" | "pending";
+  status: "active" | "cancelled" | "expired" | "trial" | "pending" | "trialing" | "past_due" | "halted";
   tokenLimit: number;
   tokensUsed: number;
   tokensRemaining: number;
   startDate: string;
+  /** Paid orders only: a subscription runs until it's cancelled. */
   endDate?: string;
+  /** Subscriptions: when the free trial ends and the first charge is taken. */
+  trialEnd?: string;
+  /** Subscriptions: when the current paid period ends (the next renewal). */
+  currentPeriodEnd?: string;
+  billingCycle?: "monthly" | "yearly";
+  /** A subscription (it can be cancelled), not a one-time order. */
+  isSubscription?: boolean;
+  /** Cancelled with its paid period still running: the plan until endDate, then it won't renew. */
+  cancelAtPeriodEnd?: boolean;
   isAutoRenew: boolean;
   plan: PlanInfo | null;
 }
@@ -49,8 +59,13 @@ export interface MembershipInfo {
 /** "pro" while a paid plan is running; "free" otherwise (including no plan yet). */
 export type PlanTier = "free" | "pro";
 
+/** The statuses that give the plan: paid (order or subscription), a
+ *  subscription's free trial, or a renewal Razorpay is retrying (a grace
+ *  period). The backend's ACCESS_STATUSES. */
+const ACCESS_STATUSES: ReadonlySet<MembershipInfo["status"]> = new Set(["active", "trialing", "past_due"]);
+
 export function tierOf(membership: MembershipInfo | null): PlanTier {
-  if (!membership || membership.status !== "active" || !membership.plan) return "free";
+  if (!membership || !ACCESS_STATUSES.has(membership.status) || !membership.plan) return "free";
   if (membership.endDate && new Date(membership.endDate).getTime() <= Date.now()) return "free";
   return membership.plan.price > 0 ? "pro" : "free";
 }
@@ -64,6 +79,9 @@ export interface SessionSnapshot {
 
 interface UserContextValue extends SessionSnapshot {
   isLoading: boolean;
+  /** The last session check got no answer (the backend down or unreachable):
+   *  signed-in or not is unknown — not the same as signed out. */
+  isUnreachable: boolean;
   /** Re-fetch user + membership from the backend, and return what it said.
    *  `quiet`: no loading state, and a backend that can't be reached leaves
    *  the session as it was instead of signing the reader out. */
@@ -83,6 +101,7 @@ const UserContext = createContext<UserContextValue | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<SessionSnapshot>(SIGNED_OUT);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUnreachable, setIsUnreachable] = useState(false);
   const lastCheck = useRef(0);
   const current = useRef<SessionSnapshot>(SIGNED_OUT);
   const setSession = useCallback((next: SessionSnapshot) => {
@@ -100,10 +119,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const next: SessionSnapshot = data?.user
         ? { userInfo: data.user, membership: data.membership ?? null, tier: tierOf(data.membership ?? null) }
         : SIGNED_OUT;
+      setIsUnreachable(false);
       setSession(next);
       return next;
     } catch (err) {
       if (quiet && !(err instanceof ApiError && err.status === 401)) return current.current;
+      // No answer, or the backend failing: unknown, not "signed out".
+      setIsUnreachable(!(err instanceof ApiError) || err.status >= 500);
       setSession(SIGNED_OUT);
       return SIGNED_OUT;
     }
@@ -146,7 +168,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [probe]);
 
   return (
-    <UserContext.Provider value={{ ...session, isLoading, refresh, logout }}>
+    <UserContext.Provider value={{ ...session, isLoading, isUnreachable, refresh, logout }}>
       {children}
     </UserContext.Provider>
   );

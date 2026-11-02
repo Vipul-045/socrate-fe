@@ -299,8 +299,24 @@ export const FAQS: readonly FaqItem[] = [
     featured: true,
   },
   {
+    q: "Is there a free trial?",
+    a: "Yes. If you haven't subscribed to Pro before, your first 7 days are free and nothing is charged until the trial ends. The trial is once per account — subscribe again later and billing starts straight away.",
+  },
+  {
+    q: "Does Pro renew automatically?",
+    a: "Yes. Pro renews every month or every year, whichever you chose at checkout, until you cancel. Payments are handled securely by Razorpay, and the first time you'll be asked to approve autopay with your card or UPI app.",
+  },
+  {
     q: "Can I cancel anytime?",
-    a: "Yes. Cancel from Settings and you keep access until the end of the billing period. No email required.",
+    a: "Yes, from Settings → Plan & billing in the app — no email required. Cancel during your free trial and you're never charged. Cancel a paid plan and you keep Pro until the end of the period you've paid for; it just won't renew. If you've had a trial before and cancel within 48 hours of your first payment, we refund that payment in full.",
+  },
+  {
+    q: "What if a payment fails?",
+    a: "We retry it over the next few days and your Pro stays on meanwhile. To pay with a different card or UPI ID, use Fix payment in Settings → Plan & billing.",
+  },
+  {
+    q: "How do I use a coupon code?",
+    a: "At checkout, choose \"Have a coupon code?\" and enter it before you pay. The discount is applied when you're charged, and Razorpay shows the final amount. A code can't be added to a subscription that's already running.",
   },
   {
     q: "What's the note download format?",
@@ -320,8 +336,8 @@ export const FAQS: readonly FaqItem[] = [
 export const CONTACT_CHANNELS = [
   {
     label: "Email",
-    value: "socratedotin@gmail.com",
-    href: "mailto:socratedotin@gmail.com",
+    value: "support@socrate.in",
+    href: "mailto:support@socrate.in",
     description:
       "Account help, billing, uploads that won't process, and data export or deletion.",
   },

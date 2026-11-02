@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/Api";
 import type { BillingCycle } from "@/lib/pricing";
@@ -123,8 +123,13 @@ export function useSubscriptionCoupon(billingCycle: BillingCycle) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  const shown = useMemo<AppliedCoupon | null>(
+    () => (applied ? { code: applied.code, label: applied.label } : null),
+    [applied],
+  );
+
   return {
-    applied: applied ? { code: applied.code, label: applied.label } : null,
+    applied: shown,
     error,
     /** Applying, or re-checking after a billing-cycle switch: keep Subscribe disabled. */
     checking: applying || rechecking,

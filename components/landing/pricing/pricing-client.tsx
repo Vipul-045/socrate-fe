@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Container, MonoLabel, PageHeader, Section } from "@/components/site/primitives";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { ApiError } from "@/lib/Api";
 import { GetMemberPlans, MemberPlan } from "@/lib/services";
 import { useUser } from "@/components/provider/authoprovider";
 import { useEnterApp } from "@/hooks/use-enter-app";
@@ -88,9 +89,11 @@ function Column({
 export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
   const [plans, setPlans] = useState<MemberPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** Why the plans didn't load: no answer from the backend, or an error from it. */
+  const [failure, setFailure] = useState<"network" | "server" | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const { userInfo, membership, tier, isLoading: userLoading } = useUser();
+  const { userInfo, membership, tier, isLoading: userLoading, isUnreachable, refresh } = useUser();
   const { enterApp, entering } = useEnterApp();
   const router = useRouter();
 
@@ -106,10 +109,19 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
         const res = await GetMemberPlans();
         if (cancelled) return;
         setPlans(res.data.PlanList);
+        setFailure(null);
       } catch (err) {
         if (cancelled) return;
-        console.error("Failed to fetch plans:", err);
-        setError("Failed to load pricing plans. Please try again later.");
+        const network = !(err instanceof ApiError);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(
+            network
+              ? "[pricing] GET /MShip/plan got no response — see the [api] line above for where it was looking."
+              : `[pricing] GET /MShip/plan answered ${(err as ApiError).status}.`,
+            err,
+          );
+        }
+        setFailure(network ? "network" : "server");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -120,7 +132,15 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
+
+  const retry = () => {
+    setLoading(true);
+    setFailure(null);
+    setReloadToken((n) => n + 1);
+    // The session check failed the same way: ask again too.
+    if (isUnreachable) void refresh();
+  };
 
   // Checkout remembers it was opened from here, so "Back" returns here.
   const checkoutHref = (plan: MemberPlan) =>
@@ -149,10 +169,23 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
           </p>
         )}
 
-        {error && !loading && (
-          <p className="border-t border-line-strong py-6 text-small text-destructive">
-            {error}
-          </p>
+        {failure && !loading && (
+          <div
+            role="alert"
+            className="flex flex-col items-start gap-4 border-t border-line-strong py-10 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p className="font-medium text-ink">We couldn&apos;t load the plans</p>
+              <p className="mt-1 text-small text-ink-soft">
+                {failure === "network"
+                  ? "We couldn't reach Socrate. Check your connection and try again."
+                  : "Something went wrong on our side. Please try again in a moment."}
+              </p>
+            </div>
+            <Button variant="outline" className="h-11 rounded-lg px-5" onClick={retry}>
+              Try again
+            </Button>
+          </div>
         )}
 
         {!loading && plans.length > 0 && (
@@ -322,8 +355,10 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
         )}
 
         <p className="mt-[clamp(1.75rem,3vw,2.25rem)] border-t border-[#eae6de] pt-5 text-xs leading-relaxed text-ink-muted">
-          Prices shown in your local currency. Payments are secured by Razorpay,
-          and paid plans don&apos;t renew automatically.
+          Prices shown in your local currency. Payments are secured by Razorpay.
+          Pro starts with a 7-day free trial for first-time subscribers, then
+          renews automatically until you cancel — anytime, from Settings → Plan
+          &amp; billing.
         </p>
       </Container>
     </Section>
