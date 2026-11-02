@@ -3,10 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/components/provider/authoprovider";
 import { createRazorpayOrder, verifyRazorpayPayment } from "@/lib/services";
+import { APP_URL } from "@/lib/navigation";
 import { useState } from "react";
 import type { RazorpayPaymentResponse } from "@/types/razorpay";
-
-const AppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
 
 const RAZORPAY_CHECKOUT_SRC = "https://checkout.razorpay.com/v1/checkout.js";
 
@@ -82,7 +81,7 @@ export function RazorpayCheckoutButton({
             if (!verified?.success) throw new Error("Payment verification failed");
 
             await refresh(); // pick up the new membership before leaving
-            window.location.href = AppUrl;
+            window.location.href = APP_URL;
           } catch (error) {
             console.error("Failed to verify Razorpay payment:", error);
             setIsLoading(false);

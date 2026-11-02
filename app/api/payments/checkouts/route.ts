@@ -1,6 +1,7 @@
 // app/api/payments/checkouts/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { resolveCountryCode } from "@/lib/geo";
+import { APP_URL } from "@/lib/navigation";
 import { resolveProductId } from "@/lib/pricing";
 
 const DODO_API_BASE_URL =
@@ -35,12 +36,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) {
-    console.error("NEXT_PUBLIC_APP_URL is not set");
-    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
-  }
-
   if (!process.env.DODO_PAYMENTS_API_KEY) {
     console.error("DODO_PAYMENTS_API_KEY is not set");
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
@@ -55,8 +50,9 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         product_cart: [{ product_id: productId, quantity: 1 }],
-        return_url: appUrl,
-        cancel_url: `${appUrl}/pricing`,
+        return_url: APP_URL,
+        // Pricing is on this site; the app has no /pricing.
+        cancel_url: new URL("/pricing", req.nextUrl.origin).toString(),
       }),
     });
 

@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3010](http://localhost:3010). Set `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_BACKENDBASEURL` first: see `.env.example`.
 
 ## Project Structure
 
