@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { AuthHeading, AuthNotice, AuthShell, authButtonClass, inkLink } from "@/components/site/auth-shell";
 import { useUser } from "@/components/provider/authoprovider";
 import { authErrorMessage, resendVerificationEmail, verifyEmail } from "@/lib/auth-api";
+import { APP_URL } from "@/lib/navigation";
 
 /* Where the emailed verification link lands. The token is in the fragment
    (#token=…): read here, sent once, and taken out of the address bar. */
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
 
 type State =
   | { step: "verifying" }

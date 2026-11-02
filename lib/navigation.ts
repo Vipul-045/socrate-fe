@@ -4,8 +4,14 @@
 // URL parameter (?next=, ?returnTo=). A parameter can only ever name a page
 // here — never another site — so none of them is an open redirect.
 
-/** The Socrate app. Signed in here means signed in there: one session (see lib/auth-api.ts). */
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.socrate.in";
+/**
+ * The Socrate app. Signed in here means signed in there: one session (see
+ * lib/auth-api.ts). Every link into the app uses this, and it comes from
+ * SOCRATE_APP_URL alone: next.config.ts won't start without it, or build
+ * for production with a localhost one, so there's no fallback here to quietly
+ * send one environment's readers to another's app.
+ */
+export const APP_URL = process.env.SOCRATE_APP_URL as string;
 
 const PROBE_ORIGIN = "https://socrate.invalid";
 
