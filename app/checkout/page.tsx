@@ -84,8 +84,9 @@ const isCycle = (value: string | null): value is BillingCycle => value === "mont
 
 type Phase =
   | { kind: "loading" }
-  | { kind: "unavailable" }
-  | { kind: "load-error"; network: boolean }
+  /** `reason`: the short code under the screen (reasonCode). */
+  | { kind: "unavailable"; reason: string }
+  | { kind: "load-error"; network: boolean; reason: string }
   | { kind: "already-active"; until: string | null }
   /** The plan summary and Start button; `notice` explains a start that didn't work. */
   | { kind: "ready"; notice?: string }
@@ -118,6 +119,27 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const errorCode = (err: unknown) =>
   err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
+
+/* The short code under an error screen, so causes that look alike to the
+   reader can be told apart in production, where explainInDev says nothing:
+     PLAN_NOT_FOUND · monthly NOT_LINKED · yearly NO_PRICE   /summary sells nothing, and why per cycle
+     PLAN_ID_NOT_SOLD          the URL's planId isn't a plan /summary sells
+     SUMMARY_404, CREATE_404   a 404 without the backend's code: a backend without the route
+     SUMMARY_500 · <code>      any other answer; NETWORK: no answer */
+function reasonCode(call: "SUMMARY" | "CREATE", err: unknown): string {
+  if (!(err instanceof ApiError)) return "NETWORK";
+  const code = errorCode(err);
+  if (code === "PLAN_NOT_FOUND") {
+    const reasons = (err.body as { reasons?: Record<string, string> } | null)?.reasons ?? {};
+    return [code, ...Object.entries(reasons).map(([cycle, why]) => `${cycle} ${why}`)].join(" · ");
+  }
+  return code ? `${call}_${err.status} · ${code}` : `${call}_${err.status}`;
+}
+
+/** The reason code, small, under an error screen: to quote to support, not to read. */
+function ReasonLine({ code }: { code: string }) {
+  return <p className="break-words font-mono text-[11px] leading-[1.5] tracking-[0.02em] text-ink-muted">Reason: {code}</p>;
+}
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKENDBASEURL || "http://localhost:3000";
 
@@ -368,7 +390,7 @@ function CheckoutPageInner() {
               "Plan unavailable: GET /api/subscriptions/summary says no billing cycle can be sold — no RAZORPAY_PLAN_ID_PRO_IN_* is linked to an active MembershipPlan (backend: npm run set:pro-plan-razorpay).",
               err.body,
             );
-            return setPhase({ kind: "unavailable" });
+            return setPhase({ kind: "unavailable", reason: reasonCode("SUMMARY", err) });
           }
           explainInDev(
             err instanceof ApiError
@@ -379,7 +401,11 @@ function CheckoutPageInner() {
               : `Checkout couldn't load: ${BACKEND_URL} couldn't be reached.`,
             err instanceof ApiError ? err.body : err,
           );
-          return setPhase({ kind: "load-error", network: !(err instanceof ApiError) });
+          return setPhase({
+            kind: "load-error",
+            network: !(err instanceof ApiError),
+            reason: reasonCode("SUMMARY", err),
+          });
         }
 
         const loaded = summaryResult.value;
@@ -389,7 +415,7 @@ function CheckoutPageInner() {
             `Plan unavailable: planId ${planId} in the URL isn't the MembershipPlan of any billing cycle the backend sells (GET /api/subscriptions/summary cycles below).`,
             loaded.cycles,
           );
-          return setPhase({ kind: "unavailable" });
+          return setPhase({ kind: "unavailable", reason: "PLAN_ID_NOT_SOLD" });
         }
         if (loaded.alreadySubscribed) return setPhase({ kind: "already-active", until: loaded.activeUntil ?? null });
         setPhase({ kind: "ready" });
@@ -535,7 +561,7 @@ function CheckoutPageInner() {
       }
       if (err instanceof ApiError && err.status === 404) {
         explainInDev(`Plan unavailable: POST ${BACKEND_URL}/api/subscriptions/create answered 404.`, err.body);
-        return setPhase({ kind: "unavailable" });
+        return setPhase({ kind: "unavailable", reason: reasonCode("CREATE", err) });
       }
       console.error("Couldn't start checkout:", err);
       setPhase({
@@ -670,6 +696,7 @@ function CheckoutPageInner() {
             label="Plan unavailable"
             title="This plan isn't available"
             actions={<PanelAction primary href="/pricing">See plans</PanelAction>}
+            footnote={<ReasonLine code={phase.reason} />}
           >
             <p>It may have changed, or the link may be incomplete. Pick a plan from our pricing page to continue.</p>
           </StatusPanel>
@@ -691,6 +718,7 @@ function CheckoutPageInner() {
                 {back}
               </>
             }
+            footnote={<ReasonLine code={phase.reason} />}
           >
             <p>
               {phase.network
