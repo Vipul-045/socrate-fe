@@ -6,3 +6,9 @@ node_modules
 
 razorpayflow.md
 next-env.d.ts
+
+# macOS folder metadata, the TypeScript build cache, and local browser
+# profiles (they hold cookies and sign-ins — never commit them).
+.DS_Store
+tsconfig.tsbuildinfo
+chrome-prof*/
