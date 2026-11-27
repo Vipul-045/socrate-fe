@@ -16,9 +16,11 @@ type CouponFieldProps = {
   coupon: SubscriptionCoupon;
   /** The checkout is starting or open: the coupon can't change under it. */
   disabled?: boolean;
+  /** Instead of checking the code here (a signed-out visitor: sign in first, code kept). */
+  onApply?: (code: string) => void;
 };
 
-export function CouponField({ coupon, disabled = false }: CouponFieldProps) {
+export function CouponField({ coupon, disabled = false, onApply }: CouponFieldProps) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const inputId = useId();
@@ -72,7 +74,8 @@ export function CouponField({ coupon, disabled = false }: CouponFieldProps) {
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        void coupon.apply(value);
+        if (onApply) onApply(value.trim().toUpperCase());
+        else void coupon.apply(value);
       }}
     >
       <label htmlFor={inputId} className="text-[13px] text-ink-soft">

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/Api";
 import type { BillingCycle } from "@/lib/pricing";
-import { validateSubscriptionCoupon, type AppliedCoupon } from "@/lib/services";
+import { validateSubscriptionCoupon, type AppliedCoupon, type CouponPricing } from "@/lib/services";
 
 /* The coupon on the subscription checkout. The browser only ever holds a
    code and the label to show for it: the backend maps the code to a
@@ -47,8 +47,12 @@ function checkFailure(err: unknown): string {
   return "We couldn't reach Socrate. Check your connection and try again.";
 }
 
-/** An applied coupon, and the billing cycle it was checked against. */
-type Applied = AppliedCoupon & { billingCycle: BillingCycle };
+/** An applied coupon, the billing cycle it was checked against, and the
+ *  backend's price with it for that cycle (absent when it can't say). */
+type Applied = AppliedCoupon & { billingCycle: BillingCycle; pricing?: CouponPricing };
+
+/** A coupon as the page shows it once applied. */
+export type ShownCoupon = AppliedCoupon & { pricing?: CouponPricing };
 
 export function useSubscriptionCoupon(billingCycle: BillingCycle) {
   const [applied, setApplied] = useState<Applied | null>(null);
@@ -65,7 +69,7 @@ export function useSubscriptionCoupon(billingCycle: BillingCycle) {
     let cancelled = false;
     validateSubscriptionCoupon(applied.code, billingCycle).then(
       (res) => {
-        if (!cancelled) setApplied({ code: res.code, label: res.label, billingCycle });
+        if (!cancelled) setApplied({ code: res.code, label: res.label, billingCycle, pricing: res.pricing });
       },
       (err) => {
         if (cancelled) return;
@@ -76,7 +80,7 @@ export function useSubscriptionCoupon(billingCycle: BillingCycle) {
         } else {
           // Couldn't ask (offline, rate-limited): keep it. The backend checks
           // the code again on subscribe, so nothing can slip through here.
-          setApplied({ ...applied, billingCycle });
+          setApplied({ ...applied, billingCycle, pricing: undefined });
         }
       },
     );
@@ -98,7 +102,7 @@ export function useSubscriptionCoupon(billingCycle: BillingCycle) {
       setError(null);
       try {
         const res = await validateSubscriptionCoupon(code, billingCycle);
-        setApplied({ code: res.code, label: res.label, billingCycle });
+        setApplied({ code: res.code, label: res.label, billingCycle, pricing: res.pricing });
       } catch (err) {
         setApplied(null);
         setError(checkFailure(err));
@@ -123,9 +127,12 @@ export function useSubscriptionCoupon(billingCycle: BillingCycle) {
 
   const clearError = useCallback(() => setError(null), []);
 
-  const shown = useMemo<AppliedCoupon | null>(
-    () => (applied ? { code: applied.code, label: applied.label } : null),
-    [applied],
+  const shown = useMemo<ShownCoupon | null>(
+    () =>
+      applied
+        ? { code: applied.code, label: applied.label, ...(applied.pricing && applied.billingCycle === billingCycle ? { pricing: applied.pricing } : {}) }
+        : null,
+    [applied, billingCycle],
   );
 
   return {

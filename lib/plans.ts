@@ -1,6 +1,6 @@
 // lib/plans.ts
 
-import type { MemberPlan, PlanFeature } from "@/lib/services";
+import type { LaunchOffer, MemberPlan, PlanFeature } from "@/lib/services";
 
 /* ─── Free and Pro, wherever the site describes them ───
    The pricing cards and checkout read the live plans (fetchPlans, below).
@@ -100,24 +100,31 @@ export function planDrift(live: MemberPlan[]): string[] {
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKENDBASEURL;
 
-/** How long a fetched plan list is reused. A price or limit changed in the
- *  database shows here within the hour. */
+/** How long a fetched plan list is reused in the page's HTML. A price or
+ *  limit changed in the database shows here within the hour; the pricing
+ *  cards ask again in the browser anyway, for the launch spots left. */
 const REVALIDATE_SECONDS = 3600;
 
-/** The active plans, cheapest first; null when the backend didn't answer
- *  (the page then asks again from the browser, and can offer a retry). */
-export async function fetchPlans(): Promise<MemberPlan[] | null> {
-  if (!BACKEND) return null;
+/** The active plans, cheapest first, and the launch offer; null plans when
+ *  the backend didn't answer (the page then asks again from the browser,
+ *  and can offer a retry). */
+export async function fetchPricing(): Promise<{ plans: MemberPlan[] | null; launch: LaunchOffer | null }> {
+  if (!BACKEND) return { plans: null, launch: null };
   try {
     const res = await fetch(`${BACKEND}/MShip/plan`, {
       next: { revalidate: REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) return null;
-    const body = (await res.json()) as { data?: { PlanList?: MemberPlan[] } };
+    if (!res.ok) return { plans: null, launch: null };
+    const body = (await res.json()) as { data?: { PlanList?: MemberPlan[]; launch?: LaunchOffer | null } };
     const plans = body.data?.PlanList;
-    return Array.isArray(plans) && plans.length > 0 ? plans : null;
+    return { plans: Array.isArray(plans) && plans.length > 0 ? plans : null, launch: body.data?.launch ?? null };
   } catch {
-    return null;
+    return { plans: null, launch: null };
   }
+}
+
+/** The active plans alone (structured data, llms.txt). */
+export async function fetchPlans(): Promise<MemberPlan[] | null> {
+  return (await fetchPricing()).plans;
 }
