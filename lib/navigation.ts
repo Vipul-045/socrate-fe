@@ -17,6 +17,22 @@ export const APP_URL = process.env.SOCRATE_APP_URL as string;
 const PROBE_ORIGIN = "https://socrate.invalid";
 
 /**
+ * `raw` when it is a page of the app (same origin as APP_URL), else null: the
+ * app sends readers to /pricing with ?appReturn=<where they were>, and "Go to
+ * app" takes them back there — never anywhere else.
+ */
+export function safeAppUrl(raw: string | null | undefined, appUrl: string = APP_URL): string | null {
+  if (!raw || raw.length > 2048 || !appUrl) return null;
+  try {
+    const url = new URL(raw);
+    if (url.origin !== new URL(appUrl).origin) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * `raw` as a path on this site (path, query and hash), or `fallback`. Parsed
  * the way the browser will parse it, so tricks like "//evil.com",
  * "/\evil.com" or a tab inside "/\t/evil.com" resolve to another origin and

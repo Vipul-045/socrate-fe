@@ -11,6 +11,26 @@ export interface PlanFeature {
   limit: number;
 }
 
+/** One billing cycle's price as the backend shows it — all paise. The
+ *  compare-at is display only (crossed out); null fields: none. */
+export interface PriceDisplay {
+  amount: number;
+  currency: string;
+  compareAtAmount: number | null;
+  savingAmount: number | null;
+  savingPercent: number | null;
+}
+
+/** "₹399 for the first 100": spots left of the cap, and the monthly price
+ *  after them. Null from the backend when there's no cap. */
+export interface LaunchOffer {
+  cap: number;
+  spotsLeft: number;
+  /** New monthly checkouts get the launch price. */
+  active: boolean;
+  fullPrice: PriceDisplay | null;
+}
+
 export interface MemberPlan {
   _id: string;
   name: string;
@@ -22,6 +42,8 @@ export interface MemberPlan {
   dailyTokenLimit: number;
   planFeatures: PlanFeature[];
   providerPlans: any[]
+  /** The plan the subscription checkout sells: what each cycle costs now. Null for the others. */
+  billing?: Partial<Record<BillingCycle, PriceDisplay>> | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -31,6 +53,7 @@ interface GetMemberPlansResponse {
   message: string;
   data: {
     PlanList: MemberPlan[];
+    launch?: LaunchOffer | null;
   };
 }
 
@@ -139,9 +162,22 @@ export interface AppliedCoupon {
   label: string;
 }
 
+/** What a coupon does to the chosen cycle's price, worked out by the backend (paise). */
+export interface CouponPricing {
+  currency: string;
+  amount: number;
+  discountAmount: number;
+  firstChargeAmount: number;
+  renewalAmount: number;
+  /** Charges discounted; null: every one. */
+  discountedCharges: number | null;
+}
+
 export interface ValidateCouponResponse extends AppliedCoupon {
   success: true;
   valid: true;
+  /** Only when the coupon's discount is on record in the admin console. */
+  pricing?: CouponPricing;
 }
 
 // Only the code is sent: the backend maps it to a Razorpay offer and says
@@ -166,10 +202,14 @@ export interface CreateSubscriptionResponse {
 // backend (or Razorpay) refuses is a 400 COUPON_INVALID, never a
 // subscription at full price: see couponRefusal() in
 // hooks/use-subscription-coupon.ts.
-export function createSubscription(billingCycle: BillingCycle, couponCode?: string | null) {
+// expectedAmount is the per-cycle price the page showed (paise). The backend
+// never charges it — it only answers 409 PRICE_CHANGED when its own price has
+// moved on (the last launch spot went), so the reader sees the new one first.
+export function createSubscription(billingCycle: BillingCycle, couponCode?: string | null, expectedAmount?: number) {
   return api.post<CreateSubscriptionResponse>("/api/subscriptions/create", {
     billingCycle,
     ...(couponCode ? { couponCode } : {}),
+    ...(expectedAmount ? { expectedAmount } : {}),
   });
 }
 
@@ -181,6 +221,10 @@ export interface SubscriptionCycle {
   /** Paise, charged every cycle after the trial — Razorpay's own price. */
   amount: number;
   currency: string;
+  /** Shown crossed out, and what that saves (paise) — only when there's a compare-at. */
+  compareAtAmount?: number;
+  savingAmount?: number | null;
+  savingPercent?: number | null;
 }
 
 export interface SubscriptionSummaryResponse {
@@ -190,6 +234,8 @@ export interface SubscriptionSummaryResponse {
   trialEligible: boolean;
   /** Only the cycles the backend can sell. */
   cycles: Partial<Record<BillingCycle, SubscriptionCycle>>;
+  /** "₹399 for the first 100" — null (or absent, from an older backend) without a cap. */
+  launch?: LaunchOffer | null;
   /** The reader already has the plan (a trial, a subscription, or a paid order). */
   alreadySubscribed: boolean;
   activeUntil: string | null;
@@ -208,6 +254,8 @@ export type SubscriptionStatus =
   | "active"
   | "past_due"
   | "halted"
+  /** Paused by Socrate (support): no plan, no charges, until it's resumed. */
+  | "paused"
   | "cancelled"
   | "expired";
 

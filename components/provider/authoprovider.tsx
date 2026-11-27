@@ -36,7 +36,7 @@ export interface PlanInfo {
 
 export interface MembershipInfo {
   membershipId: string;
-  status: "active" | "cancelled" | "expired" | "trial" | "pending" | "trialing" | "past_due" | "halted";
+  status: "active" | "cancelled" | "expired" | "trial" | "pending" | "trialing" | "past_due" | "halted" | "paused";
   tokenLimit: number;
   tokensUsed: number;
   tokensRemaining: number;
@@ -54,6 +54,13 @@ export interface MembershipInfo {
   cancelAtPeriodEnd?: boolean;
   isAutoRenew: boolean;
   plan: PlanInfo | null;
+}
+
+/** A subscription paused by Socrate: no plan while paused (so not `membership`),
+ *  and no second subscription meanwhile — the backend refuses one. */
+export interface PausedSubscription {
+  subscriptionId: string;
+  billingCycle: "monthly" | "yearly" | null;
 }
 
 /** "pro" while a paid plan is running; "free" otherwise (including no plan yet). */
@@ -75,6 +82,8 @@ export interface SessionSnapshot {
   membership: MembershipInfo | null;
   /** null when signed out. */
   tier: PlanTier | null;
+  /** A subscription paused by Socrate; null otherwise. */
+  pausedSubscription: PausedSubscription | null;
 }
 
 interface UserContextValue extends SessionSnapshot {
@@ -90,7 +99,7 @@ interface UserContextValue extends SessionSnapshot {
   logout: () => Promise<void>;
 }
 
-const SIGNED_OUT: SessionSnapshot = { userInfo: null, membership: null, tier: null };
+const SIGNED_OUT: SessionSnapshot = { userInfo: null, membership: null, tier: null, pausedSubscription: null };
 
 /* A quiet re-check when the reader comes back to the tab — they may have
    signed out, or upgraded, in the app meanwhile. Not more often than this. */
@@ -115,9 +124,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const probe = useCallback(async (quiet: boolean): Promise<SessionSnapshot> => {
     lastCheck.current = Date.now();
     try {
-      const data = await api.get<{ user: UserInfo; membership: MembershipInfo | null }>("/user");
+      const data = await api.get<{ user: UserInfo; membership: MembershipInfo | null; pausedSubscription?: PausedSubscription | null }>("/user");
       const next: SessionSnapshot = data?.user
-        ? { userInfo: data.user, membership: data.membership ?? null, tier: tierOf(data.membership ?? null) }
+        ? {
+            userInfo: data.user,
+            membership: data.membership ?? null,
+            tier: tierOf(data.membership ?? null),
+            pausedSubscription: data.pausedSubscription ?? null,
+          }
         : SIGNED_OUT;
       setIsUnreachable(false);
       setSession(next);
