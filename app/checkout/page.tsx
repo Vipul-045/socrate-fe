@@ -19,7 +19,7 @@ import {
 import { CouponField } from "@/components/checkout/coupon-field";
 import { couponRefusal, useSubscriptionCoupon } from "@/hooks/use-subscription-coupon";
 import { ApiError } from "@/lib/Api";
-import { APP_URL, safeInternalPath } from "@/lib/navigation";
+import { APP_URL, safeAppUrl, safeInternalPath } from "@/lib/navigation";
 import { failureFromCheckout, failureMessage, formatAmount, formatDate, periodLabel, planTagline } from "@/lib/payment";
 import type { BillingCycle } from "@/lib/pricing";
 import {
@@ -35,7 +35,7 @@ import {
 import type { RazorpayPaymentResponse } from "@/types/razorpay";
 import { cn } from "@/lib/utils";
 
-/* ─── /checkout?planId=…&cycle=…&returnTo=…&subscription=… ───
+/* ─── /checkout?planId=…&cycle=…&coupon=…&returnTo=…&appReturn=…&subscription=… ───
    A subscription with a free trial: the browser picks a billing cycle (and
    maybe a coupon); the backend creates the Razorpay subscription, and alone
    decides when the trial has started. The reader authorises autopay in
@@ -194,6 +194,12 @@ function CheckoutPageInner() {
   const cycleParam = searchParams.get("cycle");
   const returnParam = searchParams.get("returnTo");
   const subscriptionParam = searchParams.get("subscription");
+  /* A coupon chosen on /pricing: applied once the plan has loaded — checked
+     by the backend like one typed here (never trusted from the URL). */
+  const couponParam = searchParams.get("coupon");
+  /* The app page that sent the reader to /pricing: "Go to app" goes back there (its origin only). */
+  const appReturnParam = searchParams.get("appReturn");
+  const appHref = useMemo(() => safeAppUrl(appReturnParam) ?? APP_URL, [appReturnParam]);
   const backHref = useReturnPath(returnParam);
 
   const { userInfo, isLoading: sessionLoading, isUnreachable: sessionUnreachable, refresh } = useUser();
@@ -259,10 +265,11 @@ function CheckoutPageInner() {
       if (planId) params.set("planId", planId);
       if (nextCycle) params.set("cycle", nextCycle);
       if (returnParam) params.set("returnTo", returnParam);
+      if (appReturnParam) params.set("appReturn", appReturnParam);
       if (subscription) params.set("subscription", subscription);
       return `/checkout?${params.toString()}`;
     },
-    [planId, returnParam, cycle],
+    [planId, returnParam, appReturnParam, cycle],
   );
 
   const forgetSubscription = useCallback(() => {
@@ -453,18 +460,33 @@ function CheckoutPageInner() {
     [finishStarted, settle, sessionEnded],
   );
 
-  const { applied: appliedCoupon, checking: couponChecking, reject: rejectCoupon } = coupon;
+  const { applied: appliedCoupon, checking: couponChecking, reject: rejectCoupon, apply: applyCoupon } = coupon;
+
+  // The coupon from /pricing, applied once there's a plan to apply it to.
+  const couponFromUrl = useRef(false);
+  useEffect(() => {
+    if (couponFromUrl.current || phase.kind !== "ready" || !cycle || !couponParam) return;
+    couponFromUrl.current = true;
+    const code = couponParam.trim().toUpperCase();
+    if (/^[A-Z0-9-]{3,30}$/.test(code)) void applyCoupon(code);
+  }, [phase.kind, cycle, couponParam, applyCoupon]);
+
+  /* The price moved while the reader was choosing (the launch price sold
+     out): said above the new price, after it's loaded again. */
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
 
   const startTrial = useCallback(async () => {
     if (!cycle || starting.current || couponChecking) return;
     starting.current = true;
     const id = ++run.current;
     setPhase({ kind: "starting" });
+    setPriceNotice(null);
 
     try {
       const [scriptLoaded, data] = await Promise.all([
         loadRazorpayScript(),
-        createSubscription(cycle, appliedCoupon?.code),
+        // The amount shown here, so the backend can say if its price has moved on. Never charged.
+        createSubscription(cycle, appliedCoupon?.code, summary?.cycles[cycle]?.amount),
       ]);
       if (run.current !== id) return;
 
@@ -547,6 +569,20 @@ function CheckoutPageInner() {
       if (refusal) {
         rejectCoupon(refusal);
         return setPhase({ kind: "ready" });
+      }
+      if (errorCode(err) === "PRICE_CHANGED") {
+        // Loaded again, so the reader sees — and agrees to — the new price before paying.
+        setPriceNotice("The launch price has just sold out, so the price below has changed. Check it and continue when you're ready.");
+        setReloadToken((n) => n + 1);
+        return;
+      }
+      if (errorCode(err) === "SUBSCRIPTION_PAUSED") {
+        return setPhase({
+          kind: "ready",
+          notice:
+            ((err as ApiError).body as { message?: string } | null)?.message ??
+            "Your subscription is paused. Email support@socrate.in to resume it.",
+        });
       }
       if (errorCode(err) === "ALREADY_SUBSCRIBED") {
         const session = await refresh({ quiet: true });
@@ -740,7 +776,7 @@ function CheckoutPageInner() {
             title={`Your ${planName} plan is already active`}
             actions={
               <>
-                <PanelAction primary onClick={() => window.location.assign(APP_URL)}>
+                <PanelAction primary onClick={() => window.location.assign(appHref)}>
                   Go to Socrate
                 </PanelAction>
                 {back}
@@ -786,7 +822,7 @@ function CheckoutPageInner() {
             label={phase.trial ? "Trial started" : "Subscribed"}
             title={phase.trial ? "Your free trial has started." : `Your ${planName} plan is active.`}
             actions={
-              <PanelAction primary onClick={() => window.location.assign(APP_URL)}>
+              <PanelAction primary onClick={() => window.location.assign(appHref)}>
                 Go to Socrate
               </PanelAction>
             }
@@ -1054,7 +1090,16 @@ function CheckoutPageInner() {
               {trial ? formatAmount(0, selected.currency) : recurring}
             </span>
           </div>
-          {!trial && appliedCoupon ? (
+          {appliedCoupon?.pricing ? (
+            // The backend's figures for this coupon on this cycle; Razorpay applies the offer itself.
+            <p className="mt-1.5 text-right text-[13px] text-ink" role="status">
+              {trial ? "After your trial, with " : "With "}
+              {appliedCoupon.label}: {formatAmount(appliedCoupon.pricing.firstChargeAmount, appliedCoupon.pricing.currency)} for your first {period}
+              {appliedCoupon.pricing.renewalAmount !== appliedCoupon.pricing.firstChargeAmount
+                ? `, then ${formatAmount(appliedCoupon.pricing.renewalAmount, appliedCoupon.pricing.currency)}/${period}`
+                : ""}
+            </p>
+          ) : !trial && appliedCoupon ? (
             <p className="mt-1.5 text-right text-[13px] text-ink-muted">
               Before your {appliedCoupon.label} — Razorpay shows the final amount
             </p>
@@ -1068,6 +1113,11 @@ function CheckoutPageInner() {
             ) : null}
           </div>
 
+          {phase.kind === "ready" && priceNotice ? (
+            <p role="alert" className="mt-5 rounded-lg border border-[#e7d9a8] bg-[#fbf6e4] px-4 py-3 text-[14px] leading-[1.6] text-[#6b5a1e]">
+              {priceNotice}
+            </p>
+          ) : null}
           {phase.kind === "ready" && phase.notice ? (
             <p
               role="alert"
