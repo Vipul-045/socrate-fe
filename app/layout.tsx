@@ -4,7 +4,6 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Space_Grotesk, Crimson_Text } from "next/font/google";
-import DodoProvider from "../components/provider/dodo-provider";
 import { UserProvider } from "@/components/provider/authoprovider";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import {
@@ -90,7 +89,6 @@ export default function RootLayout({
           />
         </noscript>
         <UserProvider>
-        <DodoProvider/>
         <MotionProvider>{children}</MotionProvider>
         <Toaster />
         </UserProvider>

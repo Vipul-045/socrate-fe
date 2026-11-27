@@ -7,6 +7,8 @@ import type { Metadata } from "next";
 
 import type { Post } from "@/lib/blog";
 import { CONTACT_CHANNELS, FAQS } from "@/lib/content";
+import { PLANS, PLAN_CURRENCY } from "@/lib/plans";
+import type { MemberPlan } from "@/lib/services";
 
 export const SITE_NAME = "Socrate";
 
@@ -121,6 +123,8 @@ export function pageMetadata({
 
 const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 const WEBSITE_ID = `${SITE_URL}/#website`;
+/** The product. Home and /pricing describe the same node, so they share an id. */
+const APP_ID = `${SITE_URL}/#app`;
 
 const SUPPORT = CONTACT_CHANNELS.find((channel) => channel.label === "Email");
 
@@ -175,23 +179,87 @@ export function homeJsonLd() {
         inLanguage: "en",
         publisher: { "@id": ORGANIZATION_ID },
       },
-      {
-        "@type": "WebApplication",
-        name: SITE_NAME,
-        url: SITE_URL,
-        description: ENTITY_DESCRIPTION,
-        inLanguage: "en",
-        applicationCategory: "EducationalApplication",
-        operatingSystem: "Web",
-        publisher: { "@id": ORGANIZATION_ID },
-        offers: {
-          "@type": "Offer",
-          name: "Free",
-          price: "0",
-          priceCurrency: "INR",
-        },
-      },
+      webApplication(PLAN_OFFERS),
     ],
+  };
+}
+
+type OfferPlan = Pick<MemberPlan, "name" | "price" | "currency" | "durationDays">;
+
+/** Free and Pro as lib/plans.ts states them, for pages that don't read the
+ *  live plans. */
+const PLAN_OFFERS: OfferPlan[] = Object.values(PLANS).map((plan) => ({
+  name: plan.name,
+  price: plan.price,
+  currency: PLAN_CURRENCY,
+  durationDays: 30,
+}));
+
+/** What one payment buys: a month, a year, or a number of days. */
+function billingPeriod(durationDays: number) {
+  if (durationDays >= 28 && durationDays <= 31) return { value: 1, unitCode: "MON" };
+  if (durationDays >= 365 && durationDays <= 366) return { value: 1, unitCode: "ANN" };
+  return { value: durationDays, unitCode: "DAY" };
+}
+
+function offer(plan: OfferPlan) {
+  const price = String(plan.price);
+  const priceCurrency = (plan.currency || PLAN_CURRENCY).toUpperCase();
+  return {
+    "@type": "Offer",
+    name: plan.name,
+    price,
+    priceCurrency,
+    url: absoluteUrl("/pricing"),
+    ...(plan.price > 0 && {
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price,
+        priceCurrency,
+        referenceQuantity: { "@type": "QuantitativeValue", ...billingPeriod(plan.durationDays) },
+      },
+    }),
+  };
+}
+
+/** The product. Home and /pricing describe the same node. No ratings or
+ *  reviews: there are none to mark up. */
+function webApplication(plans: OfferPlan[]) {
+  return {
+    "@type": "WebApplication",
+    "@id": APP_ID,
+    name: SITE_NAME,
+    url: SITE_URL,
+    description: ENTITY_DESCRIPTION,
+    inLanguage: "en",
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    isAccessibleForFree: true,
+    publisher: { "@id": ORGANIZATION_ID },
+    offers: plans.map(offer),
+  };
+}
+
+/**
+ * /pricing: one Offer per plan at the price the page shows — the live plans
+ * the server read for the cards, or lib/plans.ts when the backend didn't
+ * answer (the browser then loads the same plans).
+ */
+export function pricingJsonLd(plans: MemberPlan[] | null) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      organization(),
+      webApplication(plans?.filter((plan) => plan.isActive !== false) ?? PLAN_OFFERS),
+      breadcrumbs({ name: "Pricing", path: "/pricing" }),
+    ],
+  };
+}
+
+export function featuresJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [breadcrumbs({ name: "Features", path: "/features" })],
   };
 }
 

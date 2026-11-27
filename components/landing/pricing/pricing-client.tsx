@@ -13,6 +13,7 @@ import { useUser } from "@/components/provider/authoprovider";
 import { useEnterApp } from "@/hooks/use-enter-app";
 import type { DisplayPrice } from "@/lib/pricing";
 import { planTagline } from "@/lib/payment";
+import { PLANS, featureLabel } from "@/lib/plans";
 import { cn } from "@/lib/utils";
 
 const CURRENCY_SYMBOLS: Record<string, string> = { INR: "₹", USD: "$" };
@@ -86,9 +87,18 @@ function Column({
   );
 }
 
-export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
-  const [plans, setPlans] = useState<MemberPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+export function PricingClient({
+  proPricing,
+  initialPlans,
+}: {
+  proPricing?: DisplayPrice;
+  /** The plans as the server read them, so they are in the page's HTML.
+      null when it couldn't: the browser asks, as it always used to. */
+  initialPlans?: MemberPlan[] | null;
+}) {
+  const fromServer = !!initialPlans?.length;
+  const [plans, setPlans] = useState<MemberPlan[]>(initialPlans ?? []);
+  const [loading, setLoading] = useState(!fromServer);
   /** Why the plans didn't load: no answer from the backend, or an error from it. */
   const [failure, setFailure] = useState<"network" | "server" | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
@@ -102,6 +112,9 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
   const hasPaidPlan = tier === "pro";
 
   useEffect(() => {
+    // Already here from the server; only "Try again" asks from the browser.
+    if (fromServer && reloadToken === 0) return;
+
     let cancelled = false;
 
     async function loadPlans() {
@@ -132,7 +145,7 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
     return () => {
       cancelled = true;
     };
-  }, [reloadToken]);
+  }, [reloadToken, fromServer]);
 
   const retry = () => {
     setLoading(true);
@@ -297,10 +310,7 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
                         strong={highlighted}
                         items={plan.planFeatures
                           .filter((f) => f.enabled)
-                          .map(
-                            (f) =>
-                              `${f.limit} ${f.featureKey.replace(/_/g, " ")}/month`,
-                          )}
+                          .map(featureLabel)}
                       />
                     </>
                   }
@@ -355,8 +365,8 @@ export function PricingClient({ proPricing }: { proPricing?: DisplayPrice }) {
         )}
 
         <p className="mt-[clamp(1.75rem,3vw,2.25rem)] border-t border-[#eae6de] pt-5 text-xs leading-relaxed text-ink-muted">
-          Prices shown in your local currency. Payments are secured by Razorpay.
-          Pro starts with a 7-day free trial for first-time subscribers, then
+          Prices are in Indian rupees, GST included. Payments are secured by Razorpay.
+          Pro starts with a {PLANS.pro.trialDays}-day free trial for first-time subscribers, then
           renews automatically until you cancel — anytime, from Settings → Plan
           &amp; billing.
         </p>

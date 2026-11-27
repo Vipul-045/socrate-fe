@@ -10,7 +10,9 @@ import {
   Section,
   TextLink,
 } from "@/components/site/primitives";
-import { pageMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/site/json-ld";
+import { PLANS, limitsPhrase } from "@/lib/plans";
+import { featuresJsonLd, pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "Features: AI Notes, PDF Study, Quizzes & Flashcards",
@@ -22,6 +24,7 @@ export const metadata = pageMetadata({
 export default function FeaturesPage() {
   return (
     <SiteShell>
+      <JsonLd data={featuresJsonLd()} />
       <Section>
         <Container>
           <PageHeader
@@ -66,10 +69,10 @@ export default function FeaturesPage() {
               <p>
                 Socrate is built for students preparing for exams, researchers
                 working through dense papers, and anyone teaching themselves a
-                new subject. It&apos;s free to start with 3 PDFs a month and no
-                card required —{" "}
+                new subject. It&apos;s free to start, with no card required and{" "}
+                {limitsPhrase(PLANS.free.limits)} a month —{" "}
                 <TextLink href="/pricing">compare plans and pricing</TextLink>{" "}
-                when you need unlimited uploads.
+                when you need more.
               </p>
             </Reveal>
           </div>

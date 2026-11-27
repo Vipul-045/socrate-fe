@@ -1,7 +1,10 @@
 /**
  * Single source of truth for site copy.
- * Pages stay layout-only; edit wording here.
+ * Pages stay layout-only; edit wording here. Plan prices and limits come
+ * from lib/plans.ts.
  */
+
+import { PLANS, limitsPhrase, rupees } from "@/lib/plans";
 
 export const NAV_LINKS = [
   { label: "Features", href: "/features" },
@@ -11,25 +14,53 @@ export const NAV_LINKS = [
   { label: "FAQs", href: "/faq" },
 ] as const;
 
-export const FOOTER_LINKS = [
-  { label: "Features", href: "/features" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Blog", href: "/blog" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms & Conditions", href: "/terms" },
+/**
+ * Footer columns. Product links land on the matching section of /features
+ * (the ids in FEATURES below), so only list what has a section there.
+ */
+export const FOOTER_NAV = [
+  {
+    title: "Product",
+    links: [
+      { label: "AI PDF chat", href: "/features#explanations" },
+      { label: "Smart search", href: "/features#search" },
+      { label: "Quizzes & exams", href: "/features#quizzes" },
+      { label: "Flashcards", href: "/features#flashcards" },
+      { label: "AI notes", href: "/features#notes" },
+      { label: "Pricing", href: "/pricing" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "All features", href: "/features" },
+      { label: "Blog", href: "/blog" },
+      { label: "FAQs", href: "/faq" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About", href: "/about" },
+      { label: "Contact", href: "/contact" },
+    ],
+  },
+  {
+    title: "Account",
+    links: [
+      { label: "Log in", href: "/login" },
+      { label: "Get started", href: "/login?mode=signup" },
+    ],
+  },
 ] as const;
 
-export const FREE_TIER_NOTE =
-  "Free to start · 3 PDFs every month · No card required";
-
-export const STATS = [
-  { value: "10K+", label: "PDFs analyzed" },
-  { value: "500K+", label: "Notes generated" },
-  { value: "3", label: "Free PDFs a month" },
+export const LEGAL_LINKS = [
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
 ] as const;
+
+/** Split on " · " into clauses that never break mid-phrase (hero, login). */
+export const FREE_TIER_NOTE = `Free to start · ${PLANS.free.limits.quiz_generation} quizzes a month · No card required`;
 
 export const STUDY_PILLARS_HEADING = "One upload, three ways to study";
 
@@ -50,8 +81,8 @@ export const STUDY_PILLARS = [
 
 export const VALUE_PROPS = [
   {
-    title: "3 PDFs / month",
-    description: "Start free, no card required",
+    title: "Free to start",
+    description: `${limitsPhrase(PLANS.free.limits)} a month, no card required`,
   },
   {
     title: "Instant AI insights",
@@ -165,7 +196,7 @@ export const FEATURES: readonly Feature[] = [
       "That page-by-page map is what makes the rest of the platform trustworthy: every explanation, quiz question and note can point back to the exact place it came from. PDF is supported today; DOCX, PPTX and EPUB support is in progress.",
     ],
     howTo:
-      "Upload one file per topic, chapter or lecture so each study session stays focused. The free plan includes 3 PDFs a month with no card required; Pro removes the limit for a full course load.",
+      `Upload one file per topic, chapter or lecture so each study session stays focused. Neither plan caps how many files you upload. Free includes ${limitsPhrase(PLANS.free.limits)} a month with no card required; Pro raises that to ${limitsPhrase(PLANS.pro.limits)} for a full course load.`,
     problem:
       "Study material ends up scattered across slides, handouts and textbooks. Keeping it in one place means you search, ask and revise from the same source instead of juggling tabs and folders.",
     useCases: [
@@ -300,7 +331,7 @@ export const FAQS: readonly FaqItem[] = [
   },
   {
     q: "Is there a free trial?",
-    a: "Yes. If you haven't subscribed to Pro before, your first 7 days are free and nothing is charged until the trial ends. The trial is once per account — subscribe again later and billing starts straight away.",
+    a: `Yes. If you haven't subscribed to Pro before, your first ${PLANS.pro.trialDays} days are free and nothing is charged until the trial ends. The trial is once per account — subscribe again later and billing starts straight away.`,
   },
   {
     q: "Does Pro renew automatically?",
@@ -323,9 +354,13 @@ export const FAQS: readonly FaqItem[] = [
     a: "Notes download as formatted PDFs. Markdown and DOCX export are on the way.",
   },
   {
-    q: "How many PDFs can I upload?",
-    a: "Free gives you 3 PDFs a month. Pro and Max include unlimited uploads.",
+    q: "What's the difference between Free and Pro?",
+    a: `Free costs nothing and needs no card: it includes ${limitsPhrase(PLANS.free.limits)} a month. Pro is ${rupees(PLANS.pro.price)} a month and includes ${limitsPhrase(PLANS.pro.limits)} a month, with a higher daily allowance for AI chat and explanations. First-time subscribers get the first ${PLANS.pro.trialDays} days of Pro free.`,
     featured: true,
+  },
+  {
+    q: "How many PDFs can I upload?",
+    a: "Neither plan caps how many PDFs you upload. The plans differ in how many quizzes, flashcard decks and practice exams you can generate from them each month.",
   },
   {
     q: "Do you offer student discounts?",
